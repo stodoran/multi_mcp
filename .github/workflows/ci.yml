@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - '.github/workflows/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+        enable-cache: true
+
+    - name: Set up Python
+      run: uv python install 3.13
+
+    - name: Install dependencies with dev extras
+      run: uv sync --frozen --extra dev
+
+    - name: Run unit tests
+      run: uv run pytest tests/unit/ -v
+
+    - name: Type checking
+      run: uv run pyright
+
+    - name: Lint
+      run: uv run ruff check .
+
+    - name: Format check
+      run: uv run ruff format --check .
+
+    # Integration tests disabled (require API keys and cost money)
+    # To run locally: RUN_E2E=1 uv run pytest tests/integration/ -v
+    # - name: Run integration tests
+    #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    #   env:
+    #     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    #     RUN_E2E: "1"
+    #   run: uv run pytest tests/integration/ -v --tb=short

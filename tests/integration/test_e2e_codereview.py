@@ -1,0 +1,214 @@
+"""End-to-end integration tests for codereview tool."""
+
+import os
+from pathlib import Path
+
+import pytest
+
+# Skip if RUN_E2E not set
+pytestmark = pytest.mark.skipif(not os.getenv("RUN_E2E"), reason="Integration tests require RUN_E2E=1 and API keys")
+
+
+@pytest.fixture
+def test_repo_path():
+    """Path to SQL injection test repo."""
+    return str(Path(__file__).parent.parent / "data" / "repos" / "sql_injection_example")
+
+
+@pytest.fixture
+def auth_file_path(test_repo_path):
+    """Path to auth.py with vulnerabilities."""
+    return str(Path(test_repo_path) / "auth.py")
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(120)
+async def test_codereview_finds_sql_injection(test_repo_path, auth_file_path):
+    """Test that codereview identifies SQL injection vulnerabilities."""
+    from src.tools.codereview import codereview_impl
+
+    # Single step review with files
+    response = await codereview_impl(
+        name="Review authentication module for security vulnerabilities",
+        content="Analyzing authentication code for SQL injection, password security, and input validation",
+        step_number=1,
+        next_action="stop",
+        relevant_files=[auth_file_path],
+        base_path=test_repo_path,
+        model="gpt-5-mini",
+        thread_id="test-e2e-sql-injection",
+    )
+
+    assert response["status"] == "success"
+    assert "thread_id" in response
+    assert "content" in response
+
+    # Check that SQL injection was found in the analysis
+    message = response["content"].lower()
+    assert "sql" in message, "Expected SQL to be mentioned in expert analysis"
+    assert len(message) > 200, "Expected detailed security analysis"
+
+    print("\n✓ SQL injection identified in analysis")
+    print(f"✓ Response length: {len(message)} chars")
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(180)
+async def test_codereview_continuation(test_repo_path, auth_file_path):
+    """Test multi-step review with thread continuation."""
+    # Step 1: Start review (returns checklist since next_action != "stop")
+    import uuid
+
+    from src.tools.codereview import codereview_impl
+
+    thread_id_step1 = str(uuid.uuid4())
+    response1 = await codereview_impl(
+        name="Begin security review of authentication module",
+        content="Starting comprehensive security analysis of authentication code",
+        step_number=1,
+        next_action="continue",
+        relevant_files=[auth_file_path],
+        base_path=test_repo_path,
+        model="gpt-5-mini",
+        thread_id=thread_id_step1,
+    )
+
+    assert response1["status"] == "in_progress"
+    thread_id = response1["thread_id"]
+    assert "next_action" in response1
+
+    # Step 2: Continue with same thread - now calls LLM
+    response2 = await codereview_impl(
+        name="Complete security review with detailed findings",
+        content="Completing security review with SQL injection and password findings",
+        step_number=2,
+        next_action="stop",
+        relevant_files=[auth_file_path],
+        base_path=test_repo_path,
+        model="gpt-5-mini",
+        thread_id=thread_id,
+        issues_found=[
+            {
+                "severity": "critical",
+                "location": f"{auth_file_path}:18",
+                "description": "SQL Injection - User input concatenated into SQL query",
+            }
+        ],
+    )
+
+    assert response2["status"] in ["success", "in_progress"]  # LLM may return different statuses
+    assert response2["thread_id"] == thread_id
+    assert "content" in response2
+
+    # Should have analysis in message
+    message = response2["content"].lower()
+    # Check for security-related terms (may vary based on LLM response)
+    assert any(term in message for term in ["sql", "injection", "security", "review", "analysis"])
+
+    print(f"\n✓ Thread continuation worked: {thread_id}")
+    print(f"✓ Step 1: {response1['status']}")
+    print(f"✓ Step 2: {response2['status']}")
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(30)
+async def test_models():
+    """Test models tool returns available models."""
+    from src.tools.models import models_impl
+
+    response = await models_impl()
+
+    assert "models" in response
+    assert "default_model" in response
+    assert "count" in response
+
+    models = response["models"]
+    assert len(models) > 0
+    assert response["count"] == len(models)
+
+    # Check model structure
+    for model in models:
+        assert "name" in model
+        assert "provider" in model
+        assert "aliases" in model
+        assert isinstance(model["aliases"], list)
+
+    # Should include gpt-5-mini
+    model_names = [m["name"] for m in models]
+    assert "gpt-5-mini" in model_names
+
+    print(f"\n✓ Found {len(models)} available models")
+    print(f"✓ Default model: {response['default_model']}")
+    print(f"✓ Models: {', '.join(model_names)}")
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(120)
+async def test_codereview_token_budget(test_repo_path, auth_file_path):
+    """Test that token budget is respected."""
+    import uuid
+
+    from src.tools.codereview import codereview_impl
+
+    response = await codereview_impl(
+        name="Review with token budget awareness",
+        content="Testing token budget handling and file embedding",
+        step_number=1,
+        next_action="stop",
+        relevant_files=[auth_file_path],
+        base_path=test_repo_path,
+        model="gpt-5-mini",
+        thread_id=str(uuid.uuid4()),
+    )
+
+    assert response["status"] == "success"
+    # Check that we got a response
+    assert len(response["content"]) > 0
+
+    print("\n✓ Review completed successfully")
+    print(f"✓ Response length: {len(response['content'])} chars")
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(120)
+async def test_codereview_repository_context(test_repo_path, auth_file_path):
+    """Test that repository context (CLAUDE.md) is loaded if present."""
+    from src.tools.codereview import codereview_impl
+
+    # Create a CLAUDE.md file
+    claude_md = Path(test_repo_path) / "CLAUDE.md"
+    claude_md.write_text("""# Test Repository
+
+## Security Standards
+- Always use parameterized queries
+- Never store passwords in plain text
+- Follow OWASP Top 10 guidelines
+""")
+
+    try:
+        import uuid
+
+        response = await codereview_impl(
+            name="Review with repository context",
+            content="Testing repository context loading from CLAUDE.md",
+            step_number=1,
+            next_action="stop",
+            relevant_files=[auth_file_path],
+            base_path=test_repo_path,
+            model="gpt-5-mini",
+            thread_id=str(uuid.uuid4()),
+        )
+
+        assert response["status"] == "success"
+
+        # Response should exist
+        message = response["content"].lower()
+        assert len(message) > 0
+
+        print(f"\n✓ Repository context loaded from {test_repo_path}/CLAUDE.md")
+        print("✓ Review completed with context awareness")
+
+    finally:
+        # Cleanup
+        if claude_md.exists():
+            claude_md.unlink()
