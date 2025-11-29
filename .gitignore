@@ -68,6 +68,7 @@ dmypy.json
 *.sqlite
 *.sqlite3
 data/
+!tests/data/
 
 # Logs
 *.log
