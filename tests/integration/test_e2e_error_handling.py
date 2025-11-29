@@ -1,0 +1,230 @@
+"""End-to-end integration tests for error handling."""
+
+import os
+from pathlib import Path
+
+import pytest
+
+# Skip if RUN_E2E not set
+pytestmark = pytest.mark.skipif(not os.getenv("RUN_E2E"), reason="Integration tests require RUN_E2E=1 and API keys")
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+async def test_codereview_with_nonexistent_files(tmp_path):
+    """Test codereview handles non-existent files gracefully."""
+    import uuid
+
+    from src.tools.codereview import codereview_impl
+
+    thread_id = str(uuid.uuid4())
+
+    # Pass non-existent file paths
+    fake_file = str(tmp_path / "nonexistent.py")
+
+    response = await codereview_impl(
+        name="Review with missing files",
+        content="Review non-existent files",
+        step_number=1,
+        next_action="stop",
+        relevant_files=[fake_file],
+        base_path=str(tmp_path),
+        model="gpt-5-mini",
+        thread_id=thread_id,
+    )
+
+    # Should handle gracefully - either return in_progress asking for files,
+    # or success with message about missing files
+    assert response["status"] in ["in_progress", "success"]
+    assert response["thread_id"] == thread_id
+    assert "content" in response
+
+    print(f"\n✓ Non-existent files test completed: {thread_id}")
+    print(f"✓ Status: {response['status']}")
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+async def test_codereview_with_empty_files_list(tmp_path):
+    """Test codereview handles empty files list."""
+    import uuid
+
+    from src.tools.codereview import codereview_impl
+
+    thread_id = str(uuid.uuid4())
+
+    response = await codereview_impl(
+        name="Review with no files",
+        content="Review code",
+        step_number=1,
+        next_action="stop",
+        relevant_files=[],
+        base_path=str(tmp_path),
+        model="gpt-5-mini",
+        thread_id=thread_id,
+    )
+
+    # Should return in_progress status asking for files
+    assert response["status"] == "in_progress"
+    assert response["thread_id"] == thread_id
+    assert "content" in response
+
+    # Content should indicate files are needed
+    content = response["content"].lower()
+    assert "file" in content or "code" in content, f"Expected message about needing files, got: {content}"
+
+    print(f"\n✓ Empty files list test completed: {thread_id}")
+    print(f"✓ Message: {response['content'][:100]}...")
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+async def test_codereview_exceeds_file_limit(tmp_path):
+    """Test codereview enforces max files limit via Pydantic validation."""
+    import uuid
+
+    from pydantic import ValidationError
+
+    from src.schemas.codereview import CodeReviewRequest
+
+    # Create 101 files (assuming max is 100)
+    files = []
+    for i in range(101):
+        test_file = tmp_path / f"file_{i}.py"
+        test_file.write_text(f"# File {i}\nprint('hello')")
+        files.append(str(test_file))
+
+    thread_id = str(uuid.uuid4())
+
+    # Should raise ValidationError because too many files
+    with pytest.raises(ValidationError) as exc_info:
+        CodeReviewRequest(
+            name="Review too many files",
+            content="Review all files",
+            step_number=1,
+            next_action="stop",
+            relevant_files=files,
+            base_path=str(tmp_path),
+            model="gpt-5-mini",
+            thread_id=thread_id,
+        )
+
+    # Check error message mentions too many files
+    error_str = str(exc_info.value).lower()
+    assert "too many" in error_str or "maximum" in error_str, f"Expected file limit error, got: {error_str}"
+
+    print(f"\n✓ File limit validation test completed")
+    print(f"✓ Correctly rejected {len(files)} files")
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(120)
+async def test_comparison_with_invalid_model():
+    """Test comparison handles invalid model gracefully."""
+    import uuid
+
+    from src.tools.comparison import comparison_impl
+
+    thread_id = str(uuid.uuid4())
+
+    response = await comparison_impl(
+        name="Test invalid model",
+        content="What is 2+2?",
+        step_number=1,
+        next_action="stop",
+        models=["gpt-5-mini", "invalid-model-xyz"],  # One valid, one invalid
+        base_path="/tmp",
+        thread_id=thread_id,
+    )
+
+    # Should return partial status with one success, one error
+    assert response["status"] in ["success", "partial", "error"]
+    assert response["thread_id"] == thread_id
+    assert "results" in response
+    assert len(response["results"]) == 2
+
+    # At least one should have an error
+    errors = [r for r in response["results"] if r["status"] == "error"]
+    assert len(errors) >= 1, "Expected at least one model to error"
+
+    # At least one should succeed (gpt-5-mini)
+    successes = [r for r in response["results"] if r["status"] == "success"]
+    assert len(successes) >= 1, "Expected at least one model to succeed"
+
+    print(f"\n✓ Invalid model test completed: {thread_id}")
+    print(f"✓ Status: {response['status']}")
+    print(f"✓ Successes: {len(successes)}, Errors: {len(errors)}")
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(120)
+async def test_debate_with_all_invalid_models():
+    """Test debate handles complete failure gracefully."""
+    import uuid
+
+    from src.tools.debate import debate_impl
+
+    thread_id = str(uuid.uuid4())
+
+    response = await debate_impl(
+        name="Test all invalid models",
+        content="What is 2+2?",
+        step_number=1,
+        next_action="stop",
+        models=["invalid-model-1", "invalid-model-2"],
+        base_path="/tmp",
+        thread_id=thread_id,
+    )
+
+    # Should return error status
+    assert response["status"] == "error"
+    assert response["thread_id"] == thread_id
+    # Error responses may have 'summary' instead of 'content'
+    assert "summary" in response or "content" in response
+
+    # All results should be errors
+    assert len(response["results"]) == 2
+    for result in response["results"]:
+        assert result["status"] == "error"
+        assert "error" in result  # Should have error message
+
+    print(f"\n✓ All invalid models test completed: {thread_id}")
+    print(f"✓ Status: {response['status']}")
+    print(f"✓ All models failed as expected")
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(120)
+async def test_chat_with_binary_file(tmp_path):
+    """Test chat handles binary files gracefully."""
+    import uuid
+
+    from src.tools.chat import chat_impl
+
+    # Create a binary file (simulated with null bytes)
+    binary_file = tmp_path / "binary.dat"
+    binary_file.write_bytes(b"\x00\x01\x02\x03\x04\xff\xfe")
+
+    thread_id = str(uuid.uuid4())
+
+    response = await chat_impl(
+        name="Analyze binary file",
+        content="What's in this file?",
+        step_number=1,
+        next_action="stop",
+        base_path=str(tmp_path),
+        model="gpt-5-mini",
+        thread_id=thread_id,
+        relevant_files=[str(binary_file)],
+    )
+
+    # Should succeed but skip the binary file
+    assert response["status"] in ["success", "in_progress"]
+    assert response["thread_id"] == thread_id
+    assert "content" in response
+
+    # Response should exist (even if file was skipped)
+    assert len(response["content"]) > 0
+
+    print(f"\n✓ Binary file test completed: {thread_id}")
+    print(f"✓ Status: {response['status']}")
