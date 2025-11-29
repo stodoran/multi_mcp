@@ -11,12 +11,12 @@ The server is built with FastMCP and uses a streamlined workflow architecture op
 ## Current Status
 
 **Production Ready** ✅
-- **Unit Tests**: ✅ 364 tests passing (~2s) - All tests passing
-- **Integration Tests**: ✅ 25 tests passing (~5-10min) - All tests passing
-- **Total Coverage**: ✅ 389 tests passing (~85% code coverage)
+- **Unit Tests**: ✅ 357 tests passing (~2s) - All tests passing
+- **Integration Tests**: ✅ 42 tests passing (~10-15min) - All tests passing
+- **Total Coverage**: ✅ 399 tests passing (~85% code coverage)
 - **Model Config**: YAML-based model configuration with aliases and use-case defaults
 - **Logging**: MCP tool request/response logging enabled
-- **Implementation**: Factory-based tool generation with expert validation enabled
+- **Implementation**: Checklist-based workflow with expert validation enabled
 - **File Limit Enforcement**: ✅ `settings.max_files_per_review` is enforced
 
 ## Development Commands
@@ -29,17 +29,17 @@ uv run pyright
 uv run ruff check .
 uv run ruff format .
 
-# Run all unit tests (364 tests, ~2s, all passing ✅)
+# Run all unit tests (357 tests, ~2s, all passing ✅)
 uv run pytest tests/unit/ -v
 
-# Run integration tests (25 tests, ~2-3min with parallel, all passing ✅)
+# Run integration tests (42 tests, ~5-7min with parallel, all passing ✅)
 # Note: Requires real API keys (OPENAI_API_KEY, etc.)
 RUN_E2E=1 uv run pytest tests/integration/ -n auto -v
 
-# Or run sequentially (slower, ~10min)
+# Or run sequentially (slower, ~15min)
 RUN_E2E=1 uv run pytest tests/integration/ -v
 
-# Run all tests (389 total)
+# Run all tests (399 total)
 RUN_E2E=1 uv run pytest tests/ -v
 
 # Run the MCP server
@@ -292,21 +292,26 @@ Models are defined in `config/models.yaml`. See README.md for model aliases and 
 - Runtime: ~2 seconds
 - **Coverage**: ~85% overall code coverage
 
-### Integration Tests (25 tests) ✅
+### Integration Tests (42 tests) ✅
 **Location:** `tests/integration/`
-- `test_e2e_codereview.py` (6) - End-to-end codereview with real APIs
+- `test_e2e_codereview.py` (5) - End-to-end codereview with real APIs
+- `test_e2e_chat.py` (4) - Chat functionality and repository context
 - `test_e2e_comparison.py` (1) - Multi-model comparison with real APIs
 - `test_e2e_debate.py` (1) - Two-step debate workflow with real APIs
+- `test_e2e_error_handling.py` (6) - Error handling and edge cases
+- `test_e2e_workflows.py` (3) - Multi-step workflows and continuations
+- `test_e2e_thread_management.py` (2) - Thread isolation and concurrency
+- `test_e2e_context_and_config.py` (3) - AGENTS.md, model aliases, version tool
 - `test_mcp_server.py` (17) - MCP server integration testing
 
 **Requirements:**
 - Real API keys (OPENAI_API_KEY or other providers)
 - `RUN_E2E=1` environment variable
-- Uses gpt-5-mini for fast, cost-effective testing
+- Uses gpt-5-nano for fast, cost-effective testing (configurable via fixtures)
 
 **Status:**
 - ✅ All integration tests passing
-- Runtime: ~5-10 minutes (due to real API calls)
+- Runtime: ~10-15 minutes (due to real API calls)
 
 ### Logging
 
