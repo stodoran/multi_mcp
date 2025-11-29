@@ -60,9 +60,9 @@ make lint
 make test
 # or: uv run pytest tests/unit/ -v
 
-# Integration tests (25 tests, ~10min, REQUIRED before PR)
+# Integration tests (25 tests, ~2-3min with parallel execution, REQUIRED before PR)
 make test-integration
-# or: RUN_E2E=1 uv run pytest tests/integration/ -v
+# or: RUN_E2E=1 uv run pytest tests/integration/ -n auto -v
 ```
 
 ## Code Standards
@@ -116,16 +116,22 @@ src/
 
 ## Testing
 
-We have 389 total tests: 364 unit tests (~2s) and 25 integration tests (~10min).
+We have 389 total tests: 364 unit tests (~2s) and 25 integration tests (~2-3min with parallel execution).
 
 ```bash
 # Unit tests only (364 tests, ~2s, fast - run before every commit)
 make test
 # or: uv run pytest tests/unit/ -v
 
-# Integration tests (25 tests, ~10min, requires real API keys)
+# Integration tests (25 tests, ~2-3min with parallel execution, requires real API keys)
 make test-integration
-# or: RUN_E2E=1 uv run pytest tests/integration/ -v
+# or: RUN_E2E=1 uv run pytest tests/integration/ -n auto -v
+
+# Run integration tests sequentially (slower, ~10min)
+RUN_E2E=1 uv run pytest tests/integration/ -v
+
+# Run with specific number of workers
+RUN_E2E=1 uv run pytest tests/integration/ -n 4 -v
 
 # All tests (389 total)
 make test-all
@@ -136,6 +142,8 @@ uv run pytest tests/unit/ --cov=src --cov-report=html
 ```
 
 **Note:** Integration tests require at least one API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or OPENROUTER_API_KEY) and make real API calls which cost money. They are **disabled in CI** to save costs.
+
+**Parallel Execution:** Integration tests run in parallel by default using `pytest-xdist` (`-n auto`), reducing runtime from ~10 minutes to ~2-3 minutes. Tests use unique thread IDs (UUIDs) so they don't conflict.
 
 ### Test Organization
 

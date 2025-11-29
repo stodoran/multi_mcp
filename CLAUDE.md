@@ -32,8 +32,11 @@ uv run ruff format .
 # Run all unit tests (364 tests, ~2s, all passing ✅)
 uv run pytest tests/unit/ -v
 
-# Run integration tests (25 tests, ~10min, all passing ✅)
+# Run integration tests (25 tests, ~2-3min with parallel, all passing ✅)
 # Note: Requires real API keys (OPENAI_API_KEY, etc.)
+RUN_E2E=1 uv run pytest tests/integration/ -n auto -v
+
+# Or run sequentially (slower, ~10min)
 RUN_E2E=1 uv run pytest tests/integration/ -v
 
 # Run all tests (389 total)

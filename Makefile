@@ -66,16 +66,29 @@ test:
 	@echo "Running unit tests..."
 	uv run pytest tests/unit/ -v
 
+test-cov:
+	@echo "Running unit tests with coverage report..."
+	uv run pytest tests/unit/ --cov=src --cov-report=term-missing --cov-report=html
+	@echo "✓ Coverage report generated at htmlcov/index.html"
+
 test-integration:
-	@echo "Running integration tests (requires API keys)..."
+	@echo "Running integration tests in parallel (requires API keys)..."
 	@if [ -z "$$OPENAI_API_KEY" ] && [ -z "$$GEMINI_API_KEY" ] && [ -z "$$OPENROUTER_API_KEY" ]; then \
 		echo "ERROR: No API keys set (need OPENAI_API_KEY, GEMINI_API_KEY, or OPENROUTER_API_KEY)"; \
 		echo "Set at least one: export OPENAI_API_KEY='sk-...'"; \
 		exit 1; \
 	fi
-	RUN_E2E=1 uv run pytest tests/integration/ -v
+	RUN_E2E=1 uv run pytest tests/integration/ -n auto -v
 
-test-all: test test-integration
+test-all:
+	@echo "Running all tests (unit + integration in parallel)..."
+	@if [ -z "$$OPENAI_API_KEY" ] && [ -z "$$GEMINI_API_KEY" ] && [ -z "$$OPENROUTER_API_KEY" ]; then \
+		echo "ERROR: No API keys set (need OPENAI_API_KEY, GEMINI_API_KEY, or OPENROUTER_API_KEY)"; \
+		echo "Set at least one: export OPENAI_API_KEY='sk-...'"; \
+		exit 1; \
+	fi
+	uv run pytest tests/unit/ -v
+	RUN_E2E=1 uv run pytest tests/integration/ -n auto -v
 	@echo "✓ All tests passed!"
 
 lint:

@@ -56,12 +56,19 @@ addopts = [
     "--strict-markers",
     "--strict-config",
     "-ra",
+    "--tb=short",
+    "--color=yes",
 ]
 markers = [
     "e2e: End-to-end tests using Claude CLI (deselect with '-m \"not e2e\"')",
     "slow: Tests that take >5 seconds to execute",
     "integration: Integration tests",
     "unit: Unit tests",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
 ]
 
 [tool.ruff]
