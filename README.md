@@ -8,13 +8,13 @@ A multi-model AI orchestration server that provides advanced code analysis capab
 
 Built as a **Model Context Protocol (MCP) server** for Claude Code CLI, Multi-MCP enables developers to leverage multiple AI models (OpenAI GPT, Anthropic Claude, Google Gemini) simultaneously for code analysis tasks. Whether you need automated code review with OWASP security checks, multi-model consensus for critical decisions, or AI-powered development assistance, this MCP server integrates directly into your Claude Code workflow. Perfect for Python developers, security teams, and AI engineers looking to automate code quality checks and leverage LLM-powered analysis in their development pipeline.
 
-⚠️ **Early Development**: Currently supports `codereview`, `chat`, `comparison`, `debate`, and `models` tools. More tools coming soon.
+⚠️ **Early Development**: Currently supports `codereview`, `chat`, `compare`, `debate`, and `models` tools. More tools coming soon.
 
 ## Features
 
 - **🔍 Code Review** - Systematic workflow for thorough code review using external models
 - **💬 Chat** - Interactive AI assistance for development questions
-- **🔄 Comparison** - Multi-model parallel analysis
+- **🔄 Compare** - Multi-model parallel analysis
 - **🎭 Debate** - Two-step multi-model workflow: independent answers followed by critique
 - **🤖 Multi-Model Support** - Works with OpenAI, Anthropic, Google, and OpenRouter
 - **🏷️ Model Aliases** - Use short names like `mini`, `sonnet`, `gemini`
@@ -58,7 +58,7 @@ Can you ask Multi chat what's the answer to life, universe and everything?
 Can you multi codereview this module for code quality and maintainability using gemini-3 and codex?
 ```
 
-**🔄 Comparison** - Get multiple perspectives (uses default models):
+**🔄 Compare** - Get multiple perspectives (uses default models):
 ```
 Can you multi compare the best state management approach for this React app?
 ```

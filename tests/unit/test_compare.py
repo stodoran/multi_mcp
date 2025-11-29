@@ -1,4 +1,4 @@
-"""Unit tests for comparison tool."""
+"""Unit tests for compare tool."""
 
 from unittest.mock import AsyncMock, patch
 
@@ -6,8 +6,8 @@ import pytest
 from pydantic import ValidationError
 
 from src.schemas.base import ModelResponse, ModelResponseMetadata, MultiToolRequest, MultiToolResponse
-from src.schemas.comparison import ComparisonRequest
-from src.tools.comparison import comparison_impl
+from src.schemas.compare import CompareRequest
+from src.tools.compare import compare_impl
 from src.utils.context import set_request_context
 
 
@@ -32,8 +32,8 @@ def mock_model_response(content="Response", model="test-model", error=None):
     )
 
 
-class TestComparisonSchemas:
-    """Test comparison schema validation."""
+class TestCompareSchemas:
+    """Test compare schema validation."""
 
     def test_multi_tool_request_requires_min_2_models(self):
         """MultiToolRequest requires at least 2 models."""
@@ -54,9 +54,9 @@ class TestComparisonSchemas:
         )
         assert len(request.models) == 2
 
-    def test_comparison_request_inherits_from_multi(self):
-        """ComparisonRequest inherits MultiToolRequest fields."""
-        request = ComparisonRequest(
+    def test_compare_request_inherits_from_multi(self):
+        """CompareRequest inherits MultiToolRequest fields."""
+        request = CompareRequest(
             name="compare", content="What is 2+2?", step_number=1, next_action="stop", models=["model-a", "model-b"], base_path="/tmp"
         )
         assert request.models == ["model-a", "model-b"]
@@ -104,12 +104,12 @@ class TestComparisonSchemas:
         assert response.status == "partial"
 
 
-class TestComparisonImpl:
-    """Test comparison_impl function."""
+class TestCompareImpl:
+    """Test compare_impl function."""
 
     @pytest.mark.asyncio
     async def test_all_models_succeed(self):
-        """Test comparison with all models succeeding."""
+        """Test compare with all models succeeding."""
         set_request_context(thread_id="test-thread")
         mock_response = ModelResponse(
             content="Response from model",
@@ -125,7 +125,7 @@ class TestComparisonImpl:
         with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_response
 
-            result = await comparison_impl(
+            result = await compare_impl(
                 name="test",
                 content="What is 2+2?",
                 step_number=1,
@@ -142,7 +142,7 @@ class TestComparisonImpl:
 
     @pytest.mark.asyncio
     async def test_partial_failure(self):
-        """Test comparison with one model failing."""
+        """Test compare with one model failing."""
 
         async def mock_call(messages, model):
             if model == "model-a":
@@ -153,7 +153,7 @@ class TestComparisonImpl:
         with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call_async:
             mock_call_async.side_effect = mock_call
 
-            result = await comparison_impl(
+            result = await compare_impl(
                 name="test",
                 content="test",
                 step_number=1,
@@ -169,11 +169,11 @@ class TestComparisonImpl:
 
     @pytest.mark.asyncio
     async def test_all_models_fail(self):
-        """Test comparison with all models failing."""
+        """Test compare with all models failing."""
         with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_model_response(error="All failed")
 
-            result = await comparison_impl(
+            result = await compare_impl(
                 name="test",
                 content="test",
                 step_number=1,
@@ -194,7 +194,7 @@ class TestComparisonImpl:
         with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_response
 
-            result = await comparison_impl(
+            result = await compare_impl(
                 name="test", content="test", step_number=1, next_action="stop", models=["a", "b"], base_path="/tmp", thread_id="test-thread"
             )
 
@@ -210,7 +210,7 @@ class TestComparisonImpl:
         with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_response
 
-            result = await comparison_impl(
+            result = await compare_impl(
                 name="test",
                 content="test",
                 step_number=1,
@@ -226,7 +226,7 @@ class TestComparisonImpl:
     async def test_validation_error_with_one_model(self):
         """Test that validation fails with only one model."""
         with pytest.raises(ValidationError):
-            ComparisonRequest(name="test", content="test", step_number=1, next_action="stop", models=["only-one"], base_path="/tmp")
+            CompareRequest(name="test", content="test", step_number=1, next_action="stop", models=["only-one"], base_path="/tmp")
 
     @pytest.mark.asyncio
     async def test_system_prompt_included(self):
@@ -237,7 +237,7 @@ class TestComparisonImpl:
         with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_response
 
-            await comparison_impl(
+            await compare_impl(
                 name="test",
                 content="What is 2+2?",
                 step_number=1,
@@ -253,7 +253,7 @@ class TestComparisonImpl:
                 messages = call.kwargs["messages"]
                 assert len(messages) == 2
                 assert messages[0]["role"] == "system"
-                assert "Technical Expert" in messages[0]["content"]  # Comparison prompt
+                assert "Technical Expert" in messages[0]["content"]  # Compare prompt
                 assert messages[1]["role"] == "user"
                 # Content is now XML-wrapped by MessageBuilder
                 assert "<USER_MESSAGE>" in messages[1]["content"]
@@ -263,13 +263,13 @@ class TestComparisonImpl:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("files", [None, []])
     async def test_files_none_or_empty(self, files):
-        """Test comparison handles None/empty files identically."""
+        """Test compare handles None/empty files identically."""
         mock_response = mock_model_response(content="Response", model="gpt-5-mini")
 
         with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_response
 
-            result = await comparison_impl(
+            result = await compare_impl(
                 name="Test",
                 content="What is 2+2?",
                 step_number=1,
@@ -301,7 +301,7 @@ class TestComparisonImpl:
         with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_response
 
-            result = await comparison_impl(
+            result = await compare_impl(
                 name="Test",
                 content="Review this",
                 step_number=1,
@@ -337,9 +337,9 @@ class TestComparisonImpl:
             f.write_text(f"# File {i}")
             files.append(str(f))
 
-        # Validation happens in ComparisonRequest, so this should raise ValidationError
+        # Validation happens in CompareRequest, so this should raise ValidationError
         with pytest.raises(ValidationError) as exc_info:
-            ComparisonRequest(
+            CompareRequest(
                 name="Test",
                 content="Review",
                 step_number=1,

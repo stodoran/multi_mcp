@@ -40,7 +40,7 @@ def set_request_context(
 
     Args:
         thread_id: Unique request/thread identifier
-        workflow: Workflow name (e.g., "codereview", "chat", "comparison")
+        workflow: Workflow name (e.g., "codereview", "chat", "compare")
         step_number: Current step number in multi-step workflows
         base_path: Base directory path for the project
         name: Request/step name (e.g., "Initial Analysis", "Security Review")

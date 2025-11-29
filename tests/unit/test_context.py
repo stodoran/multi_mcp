@@ -92,15 +92,15 @@ def test_partial_context_update():
     """Test updating context values partially."""
     clear_context()
     # Set initial values
-    set_request_context(thread_id="thread-1", workflow="comparison")
+    set_request_context(thread_id="thread-1", workflow="compare")
     assert get_thread_id() == "thread-1"
-    assert get_workflow() == "comparison"
+    assert get_workflow() == "compare"
     assert get_base_path() is None
 
     # Update only base_path (others should remain)
     set_request_context(base_path="/new/path")
     assert get_thread_id() == "thread-1"  # Still set
-    assert get_workflow() == "comparison"  # Still set
+    assert get_workflow() == "compare"  # Still set
     assert get_base_path() == "/new/path"  # Now set
 
     clear_context()

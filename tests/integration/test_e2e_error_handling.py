@@ -118,15 +118,15 @@ async def test_codereview_exceeds_file_limit(integration_test_model, tmp_path):
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(120)
-async def test_comparison_with_invalid_model(integration_test_model):
-    """Test comparison handles invalid model gracefully."""
+async def test_compare_with_invalid_model(integration_test_model):
+    """Test compare handles invalid model gracefully."""
     import uuid
 
-    from src.tools.comparison import comparison_impl
+    from src.tools.compare import compare_impl
 
     thread_id = str(uuid.uuid4())
 
-    response = await comparison_impl(
+    response = await compare_impl(
         name="Test invalid model",
         content="What is 2+2?",
         step_number=1,

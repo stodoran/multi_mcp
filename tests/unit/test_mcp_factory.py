@@ -271,12 +271,12 @@ class TestRealSchemas:
             elif found_optional:
                 pytest.fail(f"Required param '{param_name}' comes after optional param")
 
-    def test_comparison_request_signature(self):
-        """Test ComparisonRequest schema generates valid signature."""
-        from src.schemas.comparison import ComparisonRequest
-        from src.tools.comparison import comparison_impl
+    def test_compare_request_signature(self):
+        """Test CompareRequest schema generates valid signature."""
+        from src.schemas.compare import CompareRequest
+        from src.tools.compare import compare_impl
 
-        wrapper = create_mcp_wrapper(ComparisonRequest, comparison_impl, "Test comparison")
+        wrapper = create_mcp_wrapper(CompareRequest, compare_impl, "Test compare")
         sig = inspect.signature(wrapper)
 
         # Verify signature is valid

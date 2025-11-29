@@ -86,12 +86,12 @@ src/
 │   ├── base.py        # Base classes, ModelResponseMetadata
 │   ├── codereview.py  # CodeReview request/response
 │   ├── chat.py        # Chat request/response
-│   ├── comparison.py  # Comparison request/response
+│   ├── compare.py  # Compare request/response
 │   └── debate.py      # Debate request/response
 ├── tools/             # Tool implementation functions (*_impl)
 │   ├── codereview.py  # Code review workflow
 │   ├── chat.py        # Interactive chat
-│   ├── comparison.py  # Multi-model parallel analysis
+│   ├── compare.py  # Multi-model parallel analysis
 │   ├── debate.py      # Two-step debate workflow
 │   └── models.py      # Model listing
 ├── models/            # Model configuration and LLM integration
@@ -103,7 +103,7 @@ src/
 ├── prompts/           # System prompts (markdown files)
 │   ├── codereview.md
 │   ├── chat.md
-│   ├── comparison.md
+│   ├── compare.md
 │   ├── debate-step1.md
 │   └── debate-step2.md
 └── utils/             # Utility functions

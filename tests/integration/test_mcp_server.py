@@ -37,12 +37,12 @@ class TestMCPServerInitialization:
 
     def test_all_tools_registered(self):
         """All expected tools should be registered."""
-        from src.server import chat, codereview, comparison, debate, models, version
+        from src.server import chat, codereview, compare, debate, models, version
 
         # All tools should be accessible
         assert chat is not None
         assert codereview is not None
-        assert comparison is not None
+        assert compare is not None
         assert debate is not None
         assert models is not None
         assert version is not None
@@ -96,16 +96,16 @@ class TestToolSignatures:
             elif found_optional:
                 pytest.fail(f"Invalid signature: required parameter '{param_name}' after optional")
 
-    def test_comparison_signature_valid(self):
-        """Comparison tool should have valid parameter signature."""
-        from src.server import comparison
+    def test_compare_signature_valid(self):
+        """Compare tool should have valid parameter signature."""
+        from src.server import compare
 
-        if hasattr(comparison, "fn"):
-            func = comparison.fn
-        elif callable(comparison):
-            func = comparison
+        if hasattr(compare, "fn"):
+            func = compare.fn
+        elif callable(compare):
+            func = compare
         else:
-            pytest.fail("Cannot find callable function in comparison tool")
+            pytest.fail("Cannot find callable function in compare tool")
 
         sig = inspect.signature(func)
         params = list(sig.parameters.items())
@@ -168,16 +168,16 @@ class TestToolDescriptions:
             assert chat.__doc__ is not None
             assert len(chat.__doc__) > 0
 
-    def test_comparison_has_description(self):
-        """Comparison tool should have description."""
-        from src.server import comparison
+    def test_compare_has_description(self):
+        """Compare tool should have description."""
+        from src.server import compare
 
-        if hasattr(comparison, "description"):
-            assert comparison.description is not None
-            assert len(comparison.description) > 0
-            assert "multiple" in comparison.description.lower() or "compare" in comparison.description.lower()
-        elif hasattr(comparison, "__doc__"):
-            assert comparison.__doc__ is not None
+        if hasattr(compare, "description"):
+            assert compare.description is not None
+            assert len(compare.description) > 0
+            assert "multiple" in compare.description.lower() or "compare" in compare.description.lower()
+        elif hasattr(compare, "__doc__"):
+            assert compare.__doc__ is not None
 
     def test_debate_has_description(self):
         """Debate tool should have description."""
@@ -286,11 +286,11 @@ class TestParameterOrdering:
         """Generated wrapper functions should not have syntax errors."""
         from src.schemas.chat import ChatRequest
         from src.schemas.codereview import CodeReviewRequest
-        from src.schemas.comparison import ComparisonRequest
+        from src.schemas.compare import CompareRequest
         from src.schemas.debate import DebateRequest
         from src.tools.chat import chat_impl
         from src.tools.codereview import codereview_impl
-        from src.tools.comparison import comparison_impl
+        from src.tools.compare import compare_impl
         from src.tools.debate import debate_impl
         from src.utils.mcp_factory import create_mcp_wrapper
 
@@ -298,7 +298,7 @@ class TestParameterOrdering:
         test_cases = [
             (ChatRequest, chat_impl, "Chat"),
             (CodeReviewRequest, codereview_impl, "Code Review"),
-            (ComparisonRequest, comparison_impl, "Comparison"),
+            (CompareRequest, compare_impl, "Compare"),
             (DebateRequest, debate_impl, "Debate"),
         ]
 

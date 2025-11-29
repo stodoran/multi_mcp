@@ -99,7 +99,7 @@ class SingleToolRequest(BaseToolRequest):
 
 
 class MultiToolRequest(BaseToolRequest):
-    """Request for multi-model parallel execution (e.g., comparison)."""
+    """Request for multi-model parallel execution (e.g., compare)."""
 
     models: list[str] = Field(
         default_factory=lambda: settings.default_model_list,

@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from src.schemas.base import BaseToolRequest, ModelResponseMetadata, NextAction, SingleToolRequest, SingleToolResponse
 from src.schemas.chat import ChatRequest
 from src.schemas.codereview import CodeReviewRequest, CodeReviewResponse
-from src.schemas.comparison import ComparisonRequest
+from src.schemas.compare import CompareRequest
 
 
 class TestBaseToolRequest:
@@ -50,10 +50,10 @@ class TestBaseToolRequest:
         )
         assert request.workflow_name == "codereview"
 
-    def test_workflow_name_comparison(self):
-        """Test workflow_name for ComparisonRequest."""
-        # ComparisonRequest -> 'comparison'
-        request = ComparisonRequest(
+    def test_workflow_name_compare(self):
+        """Test workflow_name for CompareRequest."""
+        # CompareRequest -> 'compare'
+        request = CompareRequest(
             name="Test",
             content="Test content",
             step_number=1,
@@ -61,7 +61,7 @@ class TestBaseToolRequest:
             base_path="/tmp/test",
             models=["gpt-5-mini", "claude-haiku-4-5-20251001"],
         )
-        assert request.workflow_name == "comparison"
+        assert request.workflow_name == "compare"
 
 
 class TestToolRequest:

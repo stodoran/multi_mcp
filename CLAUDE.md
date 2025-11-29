@@ -71,7 +71,7 @@ See README.md for CLI usage examples. Note: CLI is experimental.
 **`src/tools/`**: Tool implementation functions
 - `codereview.py` - Code review workflow with checklist guidance and expert validation
 - `chat.py` - Interactive chat for development questions
-- `comparison.py` - Multi-model parallel analysis
+- `compare.py` - Multi-model parallel analysis
 - `debate.py` - Two-step debate workflow (independent + critique)
 - `models.py` - Model listing implementation
 
@@ -88,14 +88,14 @@ See README.md for CLI usage examples. Note: CLI is experimental.
 
 **`src/config.py`**: Environment-based configuration using Pydantic Settings
 - API keys, model defaults (`default_model`, `default_model_list`), server settings
-- `default_model_list`: Default models for multi-model comparison (comma-separated in .env)
+- `default_model_list`: Default models for multi-model compare (comma-separated in .env)
 - Loads from `.env` file
 
 **`src/schemas/`**: Pydantic models for request validation
 - `base.py` - Base `BaseToolRequest`, `SingleToolRequest`, `ModelResponseMetadata`
 - `codereview.py` - `CodeReviewRequest`, `CodeReviewResponse`
 - `chat.py` - `ChatRequest`, `ChatResponse`
-- `comparison.py` - `ComparisonRequest`, `ComparisonResponse`
+- `compare.py` - `CompareRequest`, `CompareResponse`
 - `debate.py` - `DebateRequest`, `DebateResponse`
 - **Single source of truth**: Field descriptions defined once in Pydantic models
 - **DRY principle**: Factory auto-generates tools from schemas
@@ -106,7 +106,7 @@ See README.md for CLI usage examples. Note: CLI is experimental.
 **`src/prompts/`**: System prompts loaded from markdown files
 - `codereview.md` - Code review instructions with OWASP Top 10, performance patterns
 - `chat.md` - Chat system prompt for development assistance
-- `comparison.md` - Multi-model comparison instructions
+- `compare.md` - Multi-model compare instructions
 - `debate-step1.md` - Independent answer phase instructions
 - `debate-step2.md` - Debate and voting phase instructions
 - `__init__.py` - Loads prompts into constants
@@ -177,7 +177,7 @@ codereview = mcp.tool()(mcp_monitor(codereview))
 
 **Managed Context Values**:
 - `thread_id`: Unique request/thread identifier
-- `workflow`: Workflow name (e.g., "codereview", "chat", "comparison")
+- `workflow`: Workflow name (e.g., "codereview", "chat", "compare")
 - `step_number`: Current step number in multi-step workflows
 - `base_path`: Base directory path for the project
 
@@ -262,7 +262,7 @@ Models are defined in `config/models.yaml`. See README.md for model aliases and 
 - `test_store.py` (10) - ThreadStore request/response storage
 - `test_codereview.py` (18) - Codereview step logic, LLM response parsing, error handling
 - `test_chat.py` (9) - Chat tool thread handling, stop action, file embedding
-- `test_comparison.py` (17) - Multi-model parallel execution, timeouts
+- `test_compare.py` (17) - Multi-model parallel execution, timeouts
 - `test_debate.py` (12) - Two-step debate workflow with multi-model consensus
 - `test_model_resolver.py` (21) - Model resolution, alias mapping, LiteLLM fallback
 - `test_model_config.py` (16) - YAML loading, validation, alias uniqueness
@@ -296,7 +296,7 @@ Models are defined in `config/models.yaml`. See README.md for model aliases and 
 **Location:** `tests/integration/`
 - `test_e2e_codereview.py` (5) - End-to-end codereview with real APIs
 - `test_e2e_chat.py` (4) - Chat functionality and repository context
-- `test_e2e_comparison.py` (1) - Multi-model comparison with real APIs
+- `test_e2e_compare.py` (1) - Multi-model compare with real APIs
 - `test_e2e_debate.py` (1) - Two-step debate workflow with real APIs
 - `test_e2e_error_handling.py` (6) - Error handling and edge cases
 - `test_e2e_workflows.py` (3) - Multi-step workflows and continuations
@@ -327,7 +327,7 @@ Models are defined in `config/models.yaml`. See README.md for model aliases and 
 
 **Console Logging**
 - All logs also go to `logs/server.log`
-- Structured tags: `[CODEREVIEW]`, `[CHAT]`, `[COMPARISON]`, `[MODEL_CALL]`, `[MCP_LOG]`
+- Structured tags: `[CODEREVIEW]`, `[CHAT]`, `[COMPARE]`, `[MODEL_CALL]`, `[MCP_LOG]`
 
 **Log Files:**
 ```

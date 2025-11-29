@@ -83,19 +83,19 @@ def test_generate_filename_removes_duplicate_workflow():
     chat_indices = [i for i, part in enumerate(parts) if part == "chat"]
     assert len(chat_indices) == 1, f"'chat' should appear only once, found at indices: {chat_indices}"
 
-    # Test with comparison
+    # Test with compare
     filename2 = generate_filename(
-        name="Comparison Test",
-        workflow="comparison",
+        name="Compare Test",
+        workflow="compare",
         model="gpt-5-mini",
         step_number=1,
         extension="md",
     )
 
-    assert filename2.startswith("test-comparison-gpt-5-mini-")
+    assert filename2.startswith("test-compare-gpt-5-mini-")
     parts2 = filename2.split("-")
-    comparison_indices = [i for i, part in enumerate(parts2) if part == "comparison"]
-    assert len(comparison_indices) == 1, f"'comparison' should appear only once, found at indices: {comparison_indices}"
+    compare_indices = [i for i, part in enumerate(parts2) if part == "compare"]
+    assert len(compare_indices) == 1, f"'compare' should appear only once, found at indices: {compare_indices}"
 
 
 def test_generate_filename_workflow_only_name():

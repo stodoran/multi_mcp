@@ -7,11 +7,11 @@ from fastmcp import FastMCP
 from src.config import settings
 from src.schemas.chat import ChatRequest
 from src.schemas.codereview import CodeReviewRequest
-from src.schemas.comparison import ComparisonRequest
+from src.schemas.compare import CompareRequest
 from src.schemas.debate import DebateRequest
 from src.tools.chat import chat_impl
 from src.tools.codereview import codereview_impl
-from src.tools.comparison import comparison_impl
+from src.tools.compare import compare_impl
 from src.tools.debate import debate_impl
 from src.tools.models import models_impl
 from src.utils.helpers import get_version
@@ -39,14 +39,14 @@ Supports multi-turn conversations with project context and file inclusion.""",
 )
 chat = mcp.tool()(mcp_monitor(chat))
 
-comparison = create_mcp_wrapper(
-    ComparisonRequest,
-    comparison_impl,
+compare = create_mcp_wrapper(
+    CompareRequest,
+    compare_impl,
     """Compare responses from multiple AI models.
 Runs the same content against all specified models in parallel.
 Supports multi-turn conversations with project context and file inclusion.""",
 )
-comparison = mcp.tool()(mcp_monitor(comparison))
+compare = mcp.tool()(mcp_monitor(compare))
 
 debate = create_mcp_wrapper(
     DebateRequest,
@@ -71,7 +71,7 @@ async def version() -> dict:
     return {
         "name": settings.server_name,
         "version": get_version(),
-        "tools": sorted(tool_names) if tool_names else ["chat", "codereview", "comparison", "debate", "models", "version"],
+        "tools": sorted(tool_names) if tool_names else ["chat", "codereview", "compare", "debate", "models", "version"],
     }
 
 
@@ -97,10 +97,10 @@ async def chat_prompt() -> str:
     return "Use the chat tool for general conversation, questions, and assistance."
 
 
-@mcp.prompt(name="comparison")
-async def comparison_prompt() -> str:
+@mcp.prompt(name="compare")
+async def compare_prompt() -> str:
     """Compare responses from multiple AI models"""
-    return "Use the comparison tool to run the same query against multiple models in parallel."
+    return "Use the compare tool to run the same query against multiple models in parallel."
 
 
 @mcp.prompt(name="debate")

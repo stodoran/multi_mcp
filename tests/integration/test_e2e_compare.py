@@ -1,4 +1,4 @@
-"""Integration tests for comparison tool with real API calls."""
+"""Integration tests for compare tool with real API calls."""
 
 import os
 import tempfile
@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from src.tools.comparison import comparison_impl
+from src.tools.compare import compare_impl
 
 
 @pytest.mark.skipif(not os.getenv("RUN_E2E"), reason="E2E tests require RUN_E2E=1")
 @pytest.mark.asyncio
-async def test_comparison_with_real_files(comparison_models):
-    """Test comparison with actual files and API calls."""
+async def test_compare_with_real_files(compare_models):
+    """Test compare with actual files and API calls."""
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create test file
         test_file = Path(tmpdir) / "example.py"
@@ -20,12 +20,12 @@ async def test_comparison_with_real_files(comparison_models):
 
         import uuid
 
-        result = await comparison_impl(
+        result = await compare_impl(
             name="Code Review Test",
             content="Review this function for best practices",
             step_number=1,
             next_action="stop",
-            models=comparison_models,
+            models=compare_models,
             base_path=tmpdir,
             thread_id=str(uuid.uuid4()),
             relevant_files=[str(test_file)],

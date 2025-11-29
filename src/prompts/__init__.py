@@ -22,7 +22,7 @@ def _load_prompt(filename: str) -> str:
 
 CODEREVIEW_PROMPT = _load_prompt("codereview.md")
 CHAT_PROMPT = _load_prompt("chat.md")
-COMPARISON_PROMPT = _load_prompt("comparison.md")
+COMPARE_PROMPT = _load_prompt("compare.md")
 DEBATE_STEP1_PROMPT = _load_prompt("debate-step1.md")
 DEBATE_STEP2_PROMPT = _load_prompt("debate-step2.md")
 
@@ -30,7 +30,7 @@ DEBATE_STEP2_PROMPT = _load_prompt("debate-step2.md")
 __all__ = [
     "CODEREVIEW_PROMPT",
     "CHAT_PROMPT",
-    "COMPARISON_PROMPT",
+    "COMPARE_PROMPT",
     "DEBATE_STEP1_PROMPT",
     "DEBATE_STEP2_PROMPT",
 ]

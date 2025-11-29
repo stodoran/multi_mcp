@@ -14,7 +14,7 @@ import pytest
 DEFAULT_INTEGRATION_TEST_MODEL = os.getenv("INTEGRATION_TEST_MODEL", "gpt-5-nano")
 
 # Multi-model test configurations
-DEFAULT_COMPARISON_MODELS = [DEFAULT_INTEGRATION_TEST_MODEL, "gemini-2.5-flash"]
+DEFAULT_COMPARE_MODELS = [DEFAULT_INTEGRATION_TEST_MODEL, "gemini-2.5-flash"]
 DEFAULT_DEBATE_MODELS = [DEFAULT_INTEGRATION_TEST_MODEL, DEFAULT_INTEGRATION_TEST_MODEL]  # Same model twice for minimal cost
 
 
@@ -60,9 +60,9 @@ def integration_test_model():
 
 
 @pytest.fixture
-def comparison_models():
-    """Get models to use for comparison/debate tests."""
-    return DEFAULT_COMPARISON_MODELS.copy()
+def compare_models():
+    """Get models to use for compare/debate tests."""
+    return DEFAULT_COMPARE_MODELS.copy()
 
 
 @pytest.fixture

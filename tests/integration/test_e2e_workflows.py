@@ -147,7 +147,7 @@ def subtract(a, b):
     assert response2["status"] in ["success", "in_progress"]
     assert "subtract" in response2["content"].lower()
 
-    # Turn 3: Ask for comparison (requires context from turn 1 & 2)
+    # Turn 3: Ask for compare (requires context from turn 1 & 2)
     response3 = await chat_impl(
         name="Compare functions",
         content="How are they similar?",
@@ -199,37 +199,37 @@ def subtract(a, b):
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(180)
-async def test_comparison_continuation(comparison_models, tmp_path):
-    """Test continuing a comparison with follow-up questions."""
-    from src.tools.comparison import comparison_impl
+async def test_compare_continuation(compare_models, tmp_path):
+    """Test continuing a compare with follow-up questions."""
+    from src.tools.compare import compare_impl
 
     thread_id = str(uuid.uuid4())
     test_file = tmp_path / "example.py"
     test_file.write_text("def process(data): return data")
 
-    # Initial comparison
-    response1 = await comparison_impl(
-        name="Initial comparison",
+    # Initial compare
+    response1 = await compare_impl(
+        name="Initial compare",
         content="Review this function. Keep response brief.",
         step_number=1,
         next_action="continue",
-        models=comparison_models,
+        models=compare_models,
         base_path=str(tmp_path),
         thread_id=thread_id,
         relevant_files=[str(test_file)],
     )
 
     assert response1["status"] in ["success", "partial"]
-    assert len(response1["results"]) == len(comparison_models)
+    assert len(response1["results"]) == len(compare_models)
     initial_thread = response1["thread_id"]
 
     # Follow-up question using same thread
-    response2 = await comparison_impl(
+    response2 = await compare_impl(
         name="Follow-up question",
         content="Should I add error handling? Be brief.",
         step_number=2,
         next_action="stop",
-        models=comparison_models,
+        models=compare_models,
         base_path=str(tmp_path),
         thread_id=initial_thread,  # Reuse thread
         relevant_files=[str(test_file)],
@@ -237,7 +237,7 @@ async def test_comparison_continuation(comparison_models, tmp_path):
 
     assert response2["status"] in ["success", "partial"]
     assert response2["thread_id"] == initial_thread
-    assert len(response2["results"]) == len(comparison_models)
+    assert len(response2["results"]) == len(compare_models)
 
-    print(f"\n✓ Comparison continuation completed: {thread_id}")
+    print(f"\n✓ Compare continuation completed: {thread_id}")
     print("✓ Thread preserved across steps")

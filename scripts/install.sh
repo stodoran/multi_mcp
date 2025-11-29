@@ -445,7 +445,7 @@ show_next_steps() {
     echo "   Type '/multi' in your MCP client to see available commands:" >&2
     echo "   - /multi:review   - Code review" >&2
     echo "   - /multi:chat     - AI chat" >&2
-    echo "   - /multi:compare  - Model comparison" >&2
+    echo "   - /multi:compare  - Model compare" >&2
     echo "   - /multi:models   - List models" >&2
     echo "   - /multi:version  - Server info" >&2
     echo "" >&2

@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     default_model_list: list[str] = Field(
         default=["gpt-5-mini", "gemini-2.5-flash"],
         alias="DEFAULT_MODEL_LIST",
-        description="Default models for multi-model comparison (minimum 2)",
+        description="Default models for multi-model compare (minimum 2)",
     )
     default_temperature: float = Field(default=0.2, alias="DEFAULT_TEMPERATURE")
 
