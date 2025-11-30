@@ -1,0 +1,56 @@
+#!/bin/bash
+# Pre-commit hook to prevent API key leaks in cassettes
+
+echo "🔍 Checking all cassettes for API keys..."
+
+# Patterns to search for
+PATTERNS=(
+    "sk-[A-Za-z0-9]{20,}"           # OpenAI keys
+    "sk-proj-[A-Za-z0-9]{20,}"      # OpenAI project keys
+    "sk-ant-[A-Za-z0-9]{20,}"       # Anthropic keys
+    "AIza[A-Za-z0-9_-]{35}"         # Google API keys
+    "sk-or-[A-Za-z0-9]{20,}"        # OpenRouter keys
+    "authorization:.*Bearer [A-Za-z0-9]"  # Authorization headers with values
+)
+
+# Check ALL cassette files in repository (not just staged)
+CASSETTE_DIR="tests/cassettes"
+if [ ! -d "$CASSETTE_DIR" ]; then
+    echo "✅ No cassettes directory found"
+    exit 0
+fi
+
+CASSETTE_FILES=$(find "$CASSETTE_DIR" -name "*.yaml" -type f 2>/dev/null || true)
+
+if [ -z "$CASSETTE_FILES" ]; then
+    echo "✅ No cassette files found"
+    exit 0
+fi
+
+FOUND_SECRETS=0
+
+for pattern in "${PATTERNS[@]}"; do
+    for file in $CASSETTE_FILES; do
+        if [ -f "$file" ] && grep -qE "$pattern" "$file"; then
+            echo "❌ FOUND POTENTIAL API KEY in $file"
+            echo "   Pattern: $pattern"
+            FOUND_SECRETS=1
+        fi
+    done
+done
+
+if [ $FOUND_SECRETS -eq 1 ]; then
+    echo ""
+    echo "❌ COMMIT BLOCKED: API keys detected in cassettes!"
+    echo ""
+    echo "Actions to take:"
+    echo "1. Delete cassettes: rm tests/cassettes/*.yaml"
+    echo "2. Verify filter_query_parameters in tests/conftest.py"
+    echo "3. Re-record with: RUN_E2E=1 pytest tests/integration/"
+    echo "4. Verify clean: grep -r 'AIza\\|sk-' tests/cassettes/"
+    echo ""
+    exit 1
+fi
+
+echo "✅ No API keys detected in cassettes"
+exit 0

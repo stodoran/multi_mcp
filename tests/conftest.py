@@ -313,6 +313,8 @@ def mock_cli_failure(mocker):
         elif error_type == "timeout":
             # CLI execution times out
             mock_exec = mocker.patch("src.models.litellm_client.asyncio.create_subprocess_exec")
+            mocker.patch("src.models.litellm_client.shutil.which", return_value="/usr/bin/cli")
+
             mock_process = mocker.Mock()
             mock_process.communicate = mocker.AsyncMock(side_effect=TimeoutError())
             mock_exec.return_value = mock_process
@@ -340,12 +342,50 @@ def mock_cli_failure(mocker):
 # ============================================================================
 
 
+def filter_query_parameters(response):
+    """Remove API keys from query parameters in request URIs.
+
+    VCR's filter_headers only filters HTTP headers, not query parameters.
+    This callback filters sensitive query parameters like ?key=API_KEY.
+
+    Args:
+        response: VCR response dict with 'request' key
+
+    Returns:
+        Modified response with filtered query parameters
+    """
+    from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
+
+    request = response["request"]
+    uri = request["uri"]
+
+    # Parse URL
+    parsed = urlparse(uri)
+
+    # Parse query string
+    params = parse_qs(parsed.query)
+
+    # Remove sensitive parameters
+    sensitive_params = ["key", "api_key", "apikey", "token", "access_token", "auth", "refresh_token"]
+    for param in sensitive_params:
+        if param in params:
+            params[param] = ["***REDACTED***"]
+
+    # Rebuild URL
+    new_query = urlencode(params, doseq=True)
+    new_parsed = parsed._replace(query=new_query)
+    request["uri"] = urlunparse(new_parsed)
+
+    return response
+
+
 @pytest.fixture(scope="module")
 def vcr_config():
     """VCR configuration for recording API interactions.
 
     This fixture configures pytest-recording to:
     - Filter out sensitive headers (API keys, auth tokens)
+    - Filter out sensitive query parameters (e.g., ?key=API_KEY)
     - Record cassettes once and replay on subsequent runs
     - Store cassettes in tests/cassettes/ directory
     - Match requests by URI, method, and body
@@ -375,6 +415,8 @@ def vcr_config():
             "anthropic-api-key",
             "google-api-key",
         ],
+        # Security: Filter sensitive query parameters (e.g., ?key=API_KEY)
+        "before_record_response": filter_query_parameters,
         # Record mode: "once" means record on first run, replay thereafter
         "record_mode": "once",
         # Cassette storage location

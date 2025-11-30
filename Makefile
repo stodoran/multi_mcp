@@ -1,4 +1,4 @@
-.PHONY: help install verify test test-integration test-all clean lint format format-check typecheck check pre-commit server
+.PHONY: help install install-hooks verify test test-integration test-all clean lint format format-check typecheck check pre-commit server
 
 # Load .env file if it exists
 ifneq (,$(wildcard .env))
@@ -11,6 +11,7 @@ help:
 	@echo ""
 	@echo "Setup/Installation:"
 	@echo "  make install             Run installation script (setup venv, deps, .env)"
+	@echo "  make install-hooks       Install git pre-commit hooks (API key checks)"
 	@echo "  make verify              Verify installation is working"
 	@echo ""
 	@echo "Development:"
@@ -36,6 +37,15 @@ install:
 	@echo "Running Multi-MCP installation..."
 	@chmod +x scripts/install.sh
 	./scripts/install.sh
+
+install-hooks:
+	@echo "Installing git pre-commit hooks..."
+	@chmod +x .githooks/pre-commit
+	@ln -sf ../../.githooks/pre-commit .git/hooks/pre-commit
+	@echo "✓ Git hooks installed"
+	@echo ""
+	@echo "Pre-commit hook will now check cassettes for API keys before commits."
+	@echo "Test it: git add <file> && git commit -m 'test'"
 
 verify:
 	@echo "Verifying Multi-MCP installation..."
