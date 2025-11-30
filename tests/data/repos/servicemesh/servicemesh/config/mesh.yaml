@@ -1,0 +1,25 @@
+# Service Mesh Configuration
+
+# Registry settings
+registry_sync_interval: 5000
+enable_distributed_mode: true
+
+# Circuit breaker settings
+circuit_breaker_timeout: 3000
+
+# Load balancer
+load_balancer_strategy: round_robin
+enable_sticky_sessions: true
+rebalance_on_scale: false
+
+# Health checking
+health_check_interval: 5000
+health_check_timeout: 2000
+unhealthy_threshold: 2
+
+# Tracing
+legacy_compatibility: true
+span_id_column_type: INT
+
+# Jitter
+ENABLE_JITTER: false

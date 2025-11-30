@@ -1,0 +1,81 @@
+metadata:
+  repo_name: distributedcache
+  difficulty: 5
+  total_bugs: 5
+  description: "Distributed caching system with consistent hashing, replication, TTL management, and Raft-inspired consensus"
+  domain: distributed-systems
+  files: 8
+  loc: 1308
+
+critical_bugs:
+  - id: distributedcache-c1
+    file: node.py
+    line: 55
+    line_range: [55, 58]
+    type: clock_skew_cascade
+    category: distributed_systems
+    cwe: "CWE-367"
+    description: "Distributed clock skew cascade - nodes use wall-clock for TTL without synchronization, mixed with monotonic for timeouts"
+    severity: CRITICAL
+    keywords: ["clock", "skew", "wall-clock", "monotonic", "ttl", "ntp", "time", "distributed", "replication"]
+    impact: "Cache thrashing during DST transitions or NTP adjustments, entries appear expired on different nodes"
+    function: "_get_current_time"
+    cross_file: ["ttl_manager.py:38-49", "ttl_manager.py:67-70", "storage.py:41-49", "replication.py:63-74", "consistency.py:134-161"]
+
+  - id: distributedcache-c2
+    file: hash_ring.py
+    line: 73
+    line_range: [73, 85]
+    type: ring_rebalancing_race
+    category: concurrency
+    cwe: "CWE-362"
+    description: "Race condition in ring rebalancing - concurrent reads during rebalancing see partial states without locks"
+    severity: CRITICAL
+    keywords: ["race", "condition", "rebalancing", "hash", "ring", "concurrent", "toctou", "lock"]
+    impact: "Orphaned keys stored on wrong nodes, replication to removed nodes, corruption goes undetected"
+    function: "_compute_ranges"
+    cross_file: ["hash_ring.py:88-118", "replication.py:112-121", "node.py:78-84", "storage.py:120-126"]
+
+high_bugs:
+  - id: distributedcache-h1
+    file: invalidation.py
+    line: 35
+    line_range: [31, 48]
+    type: circular_reference_leak
+    category: memory_management
+    cwe: "CWE-401"
+    description: "Memory leak via circular references - lambda closures capture self, creating uncollectable reference chains"
+    severity: HIGH
+    keywords: ["memory", "leak", "circular", "reference", "closure", "lambda", "garbage", "collection"]
+    impact: "Thousands of orphaned callback chains accumulate over days, memory leak"
+    function: "_register_storage_callbacks"
+    cross_file: ["node.py:35-41", "storage.py:109-117", "protocol.py:17-21"]
+
+  - id: distributedcache-h2
+    file: consistency.py
+    line: 89
+    line_range: [80, 89]
+    type: quorum_calculation_error
+    category: distributed_systems
+    cwe: "CWE-682"
+    description: "Inconsistent read-your-own-writes - quorum calculation uses num_replicas // 2 instead of num_replicas // 2 + 1"
+    severity: HIGH
+    keywords: ["quorum", "majority", "calculation", "consistency", "read", "write", "replica"]
+    impact: "Read-your-writes violations, clients read stale data immediately after writes"
+    function: "_calculate_quorum"
+    cross_file: ["consistency.py:100-122", "node.py:168-172", "hash_ring.py:95-118", "replication.py:52-74"]
+
+medium_bugs:
+  - id: distributedcache-m1
+    file: hash_ring.py
+    line: 56
+    line_range: [46, 56]
+    type: hash_randomization
+    category: distributed_systems
+    cwe: "CWE-330"
+    description: "Hash randomization causing cross-process inconsistency - Python's hash() is salted per-process breaking consistent hashing"
+    severity: MEDIUM
+    keywords: ["hash", "randomization", "pythonhashseed", "consistent", "hashing", "process", "restart"]
+    impact: "Massive rebalancing storm on restarts, worker processes calculate different hash values"
+    function: "add_node"
+    cross_file: ["node.py:164-178", "storage.py:36-49", "protocol.py:28-53"]

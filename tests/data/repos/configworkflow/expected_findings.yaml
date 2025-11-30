@@ -1,0 +1,108 @@
+metadata:
+  repo_name: configworkflow
+  difficulty: 4
+  total_bugs: 7
+  description: "Configuration-driven workflow engine with plugin support, state management, and persistence"
+  domain: workflow-orchestration
+  files: 6
+  loc: 380
+
+critical_bugs:
+  - id: configworkflow-c1
+    file: config.py
+    line: 12
+    line_range: [10, 18]
+    type: circular_import
+    category: architecture
+    cwe: "CWE-674"
+    description: "Circular import with side effects - config imports plugins, plugins imports config, causing initialization errors"
+    severity: CRITICAL
+    keywords: ["circular", "import", "dependency", "initialization", "attributeerror", "none"]
+    impact: "AttributeError for None references when registration code runs during initialization"
+    function: "__init__"
+    cross_file: ["plugins.py:15-25", "plugins.py:34-45"]
+
+  - id: configworkflow-c2
+    file: steps.py
+    line: 34
+    line_range: [28, 42]
+    type: pickling_failure
+    category: serialization
+    cwe: "CWE-502"
+    description: "Multiprocessing pickling failure - nested function closures cannot be pickled for parallel execution"
+    severity: CRITICAL
+    keywords: ["pickle", "closure", "nested", "function", "multiprocessing", "serialization"]
+    impact: "PicklingError prevents workflow state from being saved or distributed to worker processes"
+    function: "create_step"
+    cross_file: ["engine.py:56-78", "serializer.py:23-45"]
+
+high_bugs:
+  - id: configworkflow-h1
+    file: engine.py
+    line: 45
+    line_range: [42, 58]
+    type: config_precedence_bypass
+    category: configuration
+    cwe: "CWE-670"
+    description: "Configuration precedence bypass - engine reads file directly instead of using config getter, bypassing environment overrides"
+    severity: HIGH
+    keywords: ["config", "precedence", "bypass", "override", "environment", "drift"]
+    impact: "Environment variable overrides work for some settings but not others, causing configuration drift"
+    function: "execute_workflow"
+    cross_file: ["config.py:34-56"]
+
+  - id: configworkflow-h2
+    file: state.py
+    line: 15
+    line_range: [12, 20]
+    type: mutable_default_argument
+    category: programming_error
+    cwe: "CWE-1395"
+    description: "Mutable default argument sharing state - metadata dictionary default shared across all workflow instances"
+    severity: HIGH
+    keywords: ["mutable", "default", "shared", "state", "dictionary", "dataclass"]
+    impact: "Updates to one workflow's metadata leak into all other workflows, causing state corruption"
+    function: "WorkflowState"
+    cross_file: ["engine.py:23-45"]
+
+medium_bugs:
+  - id: configworkflow-m1
+    file: config.py
+    line: 67
+    line_range: [63, 72]
+    type: timezone_naive_datetime
+    category: datetime_handling
+    cwe: "CWE-704"
+    description: "Timezone-naive datetime comparison - scheduled times parsed as naive but compared to potentially aware datetime.now()"
+    severity: MEDIUM
+    keywords: ["timezone", "naive", "aware", "datetime", "comparison", "typeerror"]
+    impact: "Workflow scheduling crashes unpredictably based on deployment environment timezone settings"
+    function: "parse_scheduled_time"
+    cross_file: ["engine.py:89-102"]
+
+  - id: configworkflow-m2
+    file: engine.py
+    line: 78
+    line_range: [72, 85]
+    type: state_transition_violation
+    category: state_management
+    cwe: "CWE-662"
+    description: "State transition protocol violations - engine directly assigns state instead of calling validation method"
+    severity: MEDIUM
+    keywords: ["state", "transition", "validation", "bypass", "protocol", "machine"]
+    impact: "Invalid state graphs when using cached results, transitions pending to completed without running"
+    function: "execute_workflow"
+    cross_file: ["state.py:34-56"]
+
+low_bugs:
+  - id: configworkflow-l1
+    file: serializer.py
+    line: 45
+    line_range: [40, 52]
+    type: encoding_mismatch
+    category: file_handling
+    description: "Encoding assumption mismatch - writer relies on platform default but reader assumes UTF-8"
+    severity: LOW
+    keywords: ["encoding", "utf-8", "platform", "default", "mismatch", "unicode"]
+    impact: "Workflow state with unicode characters fails to load on Windows systems after restart"
+    function: "save_state"

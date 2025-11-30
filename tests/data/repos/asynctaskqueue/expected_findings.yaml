@@ -1,0 +1,122 @@
+metadata:
+  repo_name: asynctaskqueue
+  difficulty: 3
+  total_bugs: 8
+  description: "Asynchronous task processing system with queue, worker pool, scheduler, and storage"
+  domain: async-concurrency
+  files: 5
+  loc: 532
+
+critical_bugs:
+  - id: asynctaskqueue-c1
+    file: scheduler.py
+    line: 89
+    line_range: [89, 94]
+    type: async_sync_deadlock
+    category: concurrency
+    cwe: "CWE-833"
+    description: "Async/sync deadlock - scheduler calls async queue.add_task() from synchronous threading context without await"
+    severity: CRITICAL
+    keywords: ["async", "sync", "deadlock", "threading", "timer", "await", "lock", "asyncio"]
+    impact: "Lock can never be acquired, tasks cannot be enqueued, scheduler fails completely"
+    function: "_execute_job"
+    cross_file: ["queue.py:50-79", "queue.py:68"]
+
+  - id: asynctaskqueue-c2
+    file: storage.py
+    line: 48
+    line_range: [48, 51]
+    type: race_condition
+    category: concurrency
+    cwe: "CWE-362"
+    description: "Race condition in storage - non-thread-safe read-modify-write on shared dictionaries accessed by multiple worker threads"
+    severity: CRITICAL
+    keywords: ["race", "condition", "thread", "safe", "concurrent", "increment", "dictionary", "shared"]
+    impact: "Lost increments when multiple threads update retry counts concurrently"
+    function: "increment_retry_count"
+    cross_file: ["worker.py:35-38", "worker.py:84", "worker.py:90"]
+
+high_bugs:
+  - id: asynctaskqueue-h1
+    file: config.py
+    line: 22
+    line_range: [22, 22]
+    type: resource_exhaustion
+    category: resource_management
+    cwe: "CWE-770"
+    description: "Resource exhaustion from unlimited workers - max_workers=0 creates unbounded thread pool exhausting system resources"
+    severity: HIGH
+    keywords: ["resource", "exhaustion", "unlimited", "workers", "threads", "pool", "max", "unbounded"]
+    impact: "System can create thousands of threads, exhausting memory and file descriptors"
+    function: "Config"
+    cross_file: ["worker.py:35-38", "worker.py:46"]
+
+  - id: asynctaskqueue-h2
+    file: worker.py
+    line: 87
+    line_range: [87, 97]
+    type: silent_task_loss
+    category: error_handling
+    cwe: "CWE-755"
+    description: "Silent task loss - failed tasks are logged for retry but never re-enqueued, lost forever"
+    severity: HIGH
+    keywords: ["task", "loss", "retry", "silent", "failure", "re-enqueue", "lost"]
+    impact: "Failed tasks are never retried despite logging, causing data loss"
+    function: "_execute_task"
+    cross_file: ["queue.py:96-107"]
+
+  - id: asynctaskqueue-h3
+    file: scheduler.py
+    line: 101
+    line_range: [101, 120]
+    type: cancellation_propagation
+    category: state_management
+    cwe: "CWE-404"
+    description: "Cancellation propagation failure - cancel_job doesn't notify queue about tasks that should be aborted"
+    severity: HIGH
+    keywords: ["cancellation", "propagation", "state", "sync", "notification", "abort"]
+    impact: "Queue tracks cancelled tasks as RUNNING forever, stuck metrics, prevents cleanup"
+    function: "cancel_job"
+    cross_file: ["queue.py:140-142"]
+
+medium_bugs:
+  - id: asynctaskqueue-m1
+    file: queue.py
+    line: 31
+    line_range: [31, 38]
+    type: inconsistent_error_handling
+    category: error_handling
+    description: "Inconsistent error handling - queue raises custom exceptions but worker catches generic Exception"
+    severity: MEDIUM
+    keywords: ["exception", "handling", "inconsistent", "custom", "generic", "catch"]
+    impact: "Custom exceptions treated like any error, no special handling, inconsistent propagation"
+    function: "TaskQueue"
+    cross_file: ["worker.py:87"]
+
+  - id: asynctaskqueue-m2
+    file: config.py
+    line: 17
+    line_range: [17, 23]
+    type: timeout_unit_mismatch
+    category: configuration
+    cwe: "CWE-704"
+    description: "Timeout unit mismatch - config says 'seconds' but worker uses value as milliseconds"
+    severity: MEDIUM
+    keywords: ["timeout", "unit", "mismatch", "seconds", "milliseconds", "conversion"]
+    impact: "30 second timeout becomes 30 milliseconds, causing premature timeouts"
+    function: "Config"
+    cross_file: ["worker.py:73", "worker.py:78-79"]
+
+low_bugs:
+  - id: asynctaskqueue-l1
+    file: scheduler.py
+    line: 101
+    line_range: [101, 120]
+    type: confusing_api_naming
+    category: code_quality
+    description: "Confusing API naming - cancel_job actually pauses while queue.remove_task actually cancels"
+    severity: LOW
+    keywords: ["naming", "api", "confusing", "inconsistent", "cancel", "pause", "remove"]
+    impact: "API violates principle of least surprise, user confusion"
+    function: "cancel_job"
+    cross_file: ["queue.py:109-122"]

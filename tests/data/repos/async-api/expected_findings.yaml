@@ -1,0 +1,114 @@
+metadata:
+  repo_name: async-api
+  difficulty: 1
+  total_bugs: 8
+  description: "Async API with storage and config - FastAPI-style service"
+  domain: async-api
+  files: 5
+  loc: 200
+
+critical_bugs:
+  - id: async-api-c1
+    file: service.py
+    line: 16
+    line_range: [16, 19]
+    type: path_injection
+    category: security
+    cwe: "CWE-22"
+    owasp: "A01:2021 - Broken Access Control"
+    description: "Unsanitized user-controlled filename allows directory traversal and arbitrary file write"
+    severity: CRITICAL
+    keywords: ["path", "injection", "traversal", "filename", "unsanitized", "user", "input", "directory"]
+    impact: "Attacker can write files anywhere on filesystem, leading to code execution or data corruption"
+    function: "process_item"
+    cross_file: ["storage.py:11-15"]
+
+  - id: async-api-c2
+    file: storage.py
+    line: 30
+    line_range: [29, 30]
+    type: race_condition
+    category: concurrency
+    cwe: "CWE-362"
+    description: "Race-prone in-memory cache - non-atomic read-modify-write on shared dictionary"
+    severity: CRITICAL
+    keywords: ["race", "condition", "cache", "concurrent", "thread", "atomic", "dictionary", "shared"]
+    impact: "Concurrent requests can corrupt cache state, lose data, or expose stale information"
+    function: "set_last_item"
+    cross_file: ["service.py:20-21"]
+
+high_bugs:
+  - id: async-api-h1
+    file: models.py
+    line: 13
+    line_range: [13, 18]
+    type: nullability_mismatch
+    category: type_safety
+    description: "Nullability mismatch - parse_item can receive None values but doesn't handle them, returns Item with empty strings"
+    severity: HIGH
+    keywords: ["null", "none", "optional", "type", "mismatch", "nullable", "default"]
+    impact: "Invalid data passes validation, downstream code receives malformed items"
+    function: "parse_item"
+
+  - id: async-api-h2
+    file: service.py
+    line: 24
+    line_range: [24, 25]
+    type: exception_hiding
+    category: error_handling
+    description: "Exception handling hides root causes - catches all exceptions and wraps with generic message"
+    severity: HIGH
+    keywords: ["exception", "catch", "all", "hide", "error", "handling", "generic", "message"]
+    impact: "Debugging is difficult, root causes are obscured"
+    function: "process_item"
+
+medium_bugs:
+  - id: async-api-m1
+    file: config.py
+    line: 6
+    line_range: [6, 6]
+    type: config_conflict
+    category: configuration
+    description: "Conflicting configuration defaults - min_score default of 0.3 conflicts with parse_item default of 0.5"
+    severity: MEDIUM
+    keywords: ["config", "default", "conflict", "inconsistent", "mismatch", "settings"]
+    impact: "Confusing behavior depending on which default is used"
+    function: "Settings"
+    cross_file: ["models.py:13"]
+
+  - id: async-api-m2
+    file: models.py
+    line: 15
+    line_range: [15, 17]
+    type: type_assumption
+    category: type_safety
+    description: "Implicit type assumptions - payload.get() returns Any but is cast to str/float without validation"
+    severity: MEDIUM
+    keywords: ["type", "cast", "assumption", "validation", "coercion", "any"]
+    impact: "Type errors can occur at runtime if payload contains wrong types"
+    function: "parse_item"
+
+low_bugs:
+  - id: async-api-l1
+    file: service.py
+    line: 16
+    line_range: [16, 16]
+    type: naming_inconsistency
+    category: code_quality
+    description: "Inconsistent naming - using 'filename' from payload but it's never documented or validated as required field"
+    severity: LOW
+    keywords: ["naming", "inconsistent", "convention", "variable", "style"]
+    impact: "Code is harder to understand and maintain"
+    function: "process_item"
+
+  - id: async-api-l2
+    file: api.py
+    line: 8
+    line_range: [6, 11]
+    type: mixed_responsibilities
+    category: code_quality
+    description: "Mixed responsibilities - create_item duplicates item attribute extraction that should be in Item model"
+    severity: LOW
+    keywords: ["responsibility", "separation", "concerns", "duplication", "model"]
+    impact: "Code duplication, harder to maintain"
+    function: "create_item"

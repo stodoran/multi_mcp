@@ -67,8 +67,6 @@ dmypy.json
 *.db-wal
 *.sqlite
 *.sqlite3
-data/
-!tests/data/
 
 # Logs
 *.log
@@ -88,7 +86,7 @@ tmp/
 # Project specific
 .claude/
 archive/
-data/
+/data/
 docs/
 logs/
 old/

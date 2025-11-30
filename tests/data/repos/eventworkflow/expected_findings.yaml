@@ -1,0 +1,81 @@
+metadata:
+  repo_name: eventworkflow
+  difficulty: 5
+  total_bugs: 5
+  description: "Event-driven workflow orchestration with saga pattern, compensation, event sourcing, and CQRS"
+  domain: event-driven
+  files: 9
+  loc: 470
+
+critical_bugs:
+  - id: eventworkflow-c1
+    file: event_bus.py
+    line: 36
+    line_range: [36, 41]
+    type: event_ordering_violation
+    category: event_sourcing
+    cwe: "CWE-662"
+    description: "Event ordering violation causing state corruption - partitioning breaks ordering, projections process out-of-sequence"
+    severity: CRITICAL
+    keywords: ["event", "ordering", "sequence", "partition", "projection", "cqrs", "state", "corruption"]
+    impact: "Projections see inconsistent states, saga makes wrong compensation decisions"
+    function: "publish"
+    cross_file: ["event_store.py:45-58", "projections.py:36-48", "state_machine.py:23-36", "saga.py:66-75"]
+
+  - id: eventworkflow-c2
+    file: saga.py
+    line: 98
+    line_range: [98, 110]
+    type: compensation_deadlock
+    category: concurrency
+    cwe: "CWE-833"
+    description: "Compensation cascade deadlock - compensation workers exhausted while holding saga lock that compensations need"
+    severity: CRITICAL
+    keywords: ["deadlock", "compensation", "threadpool", "lock", "cascade", "resource", "exhaustion"]
+    impact: "Compensation storm exhausts thread pool while waiting for locks, complete deadlock"
+    function: "compensate"
+    cross_file: ["compensations.py:22-30", "engine.py:31-59", "scheduler.py:19-27"]
+
+high_bugs:
+  - id: eventworkflow-h1
+    file: event_store.py
+    line: 51
+    line_range: [51, 58]
+    type: event_replay_race
+    category: event_sourcing
+    cwe: "CWE-362"
+    description: "Event store replay race causing duplicate events - at-least-once delivery without idempotency checking"
+    severity: HIGH
+    keywords: ["replay", "duplicate", "event", "idempotency", "at-least-once", "crash", "recovery"]
+    impact: "Events processed multiple times after crash, projections have incorrect counts"
+    function: "replay_from_snapshot"
+    cross_file: ["snapshots.py:18-28", "projections.py:42-48", "state_machine.py:35-36"]
+
+  - id: eventworkflow-h2
+    file: engine.py
+    line: 12
+    line_range: [12, 13]
+    type: contextvar_leakage
+    category: concurrency
+    cwe: "CWE-362"
+    description: "Contextvars leakage across saga instances - async tasks inherit context from wrong saga under concurrent load"
+    severity: HIGH
+    keywords: ["contextvar", "leakage", "async", "task", "context", "concurrent", "saga", "isolation"]
+    impact: "Saga A's events update Saga B's projection, complete state corruption"
+    function: "execute_saga"
+    cross_file: ["saga.py:13-14", "saga.py:66-75", "event_bus.py:10-11", "event_bus.py:39-41", "projections.py:10-11", "projections.py:36-42"]
+
+medium_bugs:
+  - id: eventworkflow-m1
+    file: saga.py
+    line: 54
+    line_range: [49, 58]
+    type: cancellation_suppression
+    category: async_patterns
+    cwe: "CWE-754"
+    description: "Asyncio cancellation not propagating - return_exceptions=True suppresses CancelledError preventing proper cleanup"
+    severity: MEDIUM
+    keywords: ["asyncio", "cancellation", "gather", "return_exceptions", "timeout", "compensation"]
+    impact: "Compensations run concurrently with still-running steps, race conditions"
+    function: "execute_steps"
+    cross_file: ["scheduler.py:24-27", "engine.py:35-48", "compensations.py:22-30"]

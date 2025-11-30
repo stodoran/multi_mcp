@@ -1,0 +1,83 @@
+metadata:
+  repo_name: sql_injection
+  difficulty: 1
+  total_bugs: 5
+  description: "Authentication module with OWASP Top 10 security vulnerabilities"
+  domain: security
+  files: 1
+  loc: 74
+
+critical_bugs:
+  - id: sql-injection-c1
+    file: auth.py
+    line: 17
+    line_range: [17, 18]
+    type: sql_injection
+    category: security
+    cwe: "CWE-89"
+    owasp: "A03:2021 - Injection"
+    description: "SQL injection in authenticate_user() - user input directly concatenated into SQL query"
+    severity: CRITICAL
+    keywords: ["sql", "injection", "concatenat", "f-string", "query", "username", "password", "unsanitized"]
+    impact: "Attacker can bypass authentication, extract data, or modify database"
+    function: "authenticate_user"
+
+  - id: sql-injection-c2
+    file: auth.py
+    line: 38
+    line_range: [38, 38]
+    type: sql_injection
+    category: security
+    cwe: "CWE-89"
+    owasp: "A03:2021 - Injection"
+    description: "SQL injection in create_user() - user input concatenated into INSERT statement"
+    severity: CRITICAL
+    keywords: ["sql", "injection", "insert", "concatenat", "f-string", "username", "password"]
+    impact: "Database manipulation, code injection"
+    function: "create_user"
+
+  - id: sql-injection-c3
+    file: auth.py
+    line: 38
+    line_range: [36, 38]
+    type: plaintext_password
+    category: security
+    cwe: "CWE-256"
+    owasp: "A02:2021 - Cryptographic Failures"
+    description: "Plain text password storage - passwords stored without hashing or encryption"
+    severity: CRITICAL
+    keywords: ["plain", "text", "password", "hash", "encrypt", "bcrypt", "credential", "storage"]
+    impact: "Complete credential compromise if database is breached"
+    function: "create_user"
+
+high_bugs:
+  - id: sql-injection-h1
+    file: auth.py
+    line: 73
+    line_range: [73, 73]
+    type: weak_password_policy
+    category: security
+    cwe: "CWE-521"
+    owasp: "A07:2021 - Identification and Authentication Failures"
+    description: "Weak password policy - only requires 4 characters, should be at least 12"
+    severity: HIGH
+    keywords: ["password", "policy", "weak", "length", "strength", "requirement", "minimum"]
+    impact: "Easily brute-forceable passwords"
+    function: "check_password_strength"
+
+medium_bugs:
+  - id: sql-injection-m1
+    file: auth.py
+    line: 59
+    line_range: [59, 59]
+    type: data_exposure
+    category: security
+    cwe: "CWE-213"
+    owasp: "A01:2021 - Broken Access Control"
+    description: "Data exposure via SELECT * - exposes all columns including potentially sensitive fields"
+    severity: MEDIUM
+    keywords: ["select", "star", "exposure", "sensitive", "data", "column", "leak"]
+    impact: "Unintended exposure of sensitive user data (hashed passwords, tokens, etc.)"
+    function: "get_user_data"
+
+low_bugs: []

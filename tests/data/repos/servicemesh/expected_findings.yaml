@@ -1,0 +1,81 @@
+metadata:
+  repo_name: servicemesh
+  difficulty: 5
+  total_bugs: 5
+  description: "Microservices service mesh with discovery, load balancing, circuit breakers, health checking, and tracing"
+  domain: service-mesh
+  files: 10
+  loc: 1400
+
+critical_bugs:
+  - id: servicemesh-c1
+    file: registry.py
+    line: 56
+    line_range: [34, 78]
+    type: split_brain_discovery
+    category: distributed_systems
+    cwe: "CWE-662"
+    description: "Split-brain service discovery - eventual consistency with wall-clock merge during network partition causes stale endpoints"
+    severity: CRITICAL
+    keywords: ["split-brain", "discovery", "partition", "eventual", "consistency", "vector", "clock", "wall-clock"]
+    impact: "Circuit breaker opens but discovery refresh before state propagates, clients keep trying dead endpoints"
+    function: "merge_registry_state"
+    cross_file: ["discovery.py:34", "mesh.py:78", "load_balancer.py:91", "endpoints.py:45"]
+
+  - id: servicemesh-c2
+    file: retry_policy.py
+    line: 28
+    line_range: [28, 40]
+    type: retry_storm
+    category: distributed_systems
+    cwe: "CWE-400"
+    description: "Retry storm from uncoordinated exponential backoff - no jitter causes synchronized retries creating thundering herd"
+    severity: CRITICAL
+    keywords: ["retry", "storm", "thundering", "herd", "jitter", "exponential", "backoff", "synchronized"]
+    impact: "All clients retry simultaneously at same intervals, overwhelming recovering service"
+    function: "calculate_delay"
+    cross_file: ["circuit_breaker.py:89", "circuit_breaker.py:103", "mesh.py:45", "endpoints.py:67"]
+
+high_bugs:
+  - id: servicemesh-h1
+    file: health_checker.py
+    line: 61
+    line_range: [34, 78]
+    type: health_check_flapping
+    category: reliability
+    cwe: "CWE-691"
+    description: "Health check flapping from probe timing mismatch - timeout shorter than p99 latency causes cascading failures"
+    severity: HIGH
+    keywords: ["health", "check", "flapping", "timeout", "latency", "p99", "cascading", "failure"]
+    impact: "False negatives redistribute load increasing latency, pushing more endpoints over threshold"
+    function: "check_endpoint_health"
+    cross_file: ["endpoints.py:78", "load_balancer.py:45", "metrics.py:92"]
+
+  - id: servicemesh-h2
+    file: load_balancer.py
+    line: 115
+    line_range: [115, 145]
+    type: load_balancer_bias
+    category: load_balancing
+    cwe: "CWE-328"
+    description: "Load balancer bias from sticky session hash collision - simple modulo causes uneven distribution and scaling issues"
+    severity: HIGH
+    keywords: ["load", "balancer", "bias", "hash", "collision", "modulo", "consistent", "hashing", "sticky"]
+    impact: "15% vs 5% traffic split, 90/10 split after scaling, poor distribution"
+    function: "get_endpoint_for_session"
+    cross_file: ["mesh.py:67", "endpoints.py:89", "tracing.py:56"]
+
+medium_bugs:
+  - id: servicemesh-m1
+    file: tracing.py
+    line: 34
+    line_range: [28, 156]
+    type: span_id_collision
+    category: observability
+    cwe: "CWE-330"
+    description: "Distributed tracing span ID collision - mixed 32/64-bit truncation with correlated seeding causes high collision rate"
+    severity: MEDIUM
+    keywords: ["tracing", "span", "collision", "32-bit", "64-bit", "truncation", "birthday", "paradox"]
+    impact: "Birthday paradox causes collisions at 65K spans, production volume 36M req/hour exceeds this"
+    function: "generate_span_id"
+    cross_file: ["mesh.py:123", "metrics.py:67"]

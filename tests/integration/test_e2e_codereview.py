@@ -12,7 +12,7 @@ pytestmark = pytest.mark.skipif(not os.getenv("RUN_E2E"), reason="Integration te
 @pytest.fixture
 def test_repo_path():
     """Path to SQL injection test repo."""
-    return str(Path(__file__).parent.parent / "data" / "repos" / "sql_injection_example")
+    return str(Path(__file__).parent.parent / "data" / "repos" / "sql_injection" / "sql_injection")
 
 
 @pytest.fixture

@@ -1,0 +1,81 @@
+metadata:
+  repo_name: pluginpipeline
+  difficulty: 4
+  total_bugs: 5
+  description: "Extensible data processing pipeline with plugin system, resource pooling, backpressure, and hot-reload"
+  domain: plugin-architecture
+  files: 9
+  loc: 272
+
+critical_bugs:
+  - id: pluginpipeline-c1
+    file: config_watcher.py
+    line: 20
+    line_range: [20, 25]
+    type: hot_reload_race
+    category: concurrency
+    cwe: "CWE-362"
+    description: "Plugin hot-reload race causing data corruption - module deletion happens while executor still using old plugin"
+    severity: CRITICAL
+    keywords: ["hot-reload", "race", "plugin", "module", "sys.modules", "delete", "in-flight", "corruption"]
+    impact: "In-flight processing has half-old half-new state, AttributeError on renamed attributes"
+    function: "check_and_reload"
+    cross_file: ["plugin_loader.py:36-48", "pipeline.py:23-27", "executor.py:17-27", "stream.py:21-27"]
+
+  - id: pluginpipeline-c2
+    file: resource_pool.py
+    line: 14
+    line_range: [14, 41]
+    type: resource_pool_deadlock
+    category: concurrency
+    cwe: "CWE-833"
+    description: "Resource pool deadlock via nested acquisition - tasks hold one connection and try to acquire another"
+    severity: CRITICAL
+    keywords: ["deadlock", "nested", "acquisition", "resource", "pool", "semaphore", "exhaustion"]
+    impact: "All connections held by first-level tasks waiting for second connection, complete deadlock"
+    function: "acquire"
+    cross_file: ["executor.py:17-38", "pipeline.py:18-27", "plugin_loader.py:17-28"]
+
+high_bugs:
+  - id: pluginpipeline-h1
+    file: backpressure.py
+    line: 21
+    line_range: [13, 21]
+    type: signal_inversion
+    category: logic_error
+    cwe: "CWE-670"
+    description: "Backpressure signal inversion causing OOM - should_throttle returns inverted signal, stream continues when should stop"
+    severity: HIGH
+    keywords: ["backpressure", "inversion", "signal", "throttle", "oom", "unbounded", "buffer"]
+    impact: "Pipeline doesn't check backpressure, keeps buffering, eventually OOM"
+    function: "should_throttle"
+    cross_file: ["stream.py:17-27", "executor.py:14-16", "pipeline.py:13-16"]
+
+  - id: pluginpipeline-h2
+    file: isolation.py
+    line: 16
+    line_range: [16, 34]
+    type: logging_singleton_leakage
+    category: isolation
+    cwe: "CWE-362"
+    description: "Logging handler state leakage - Python logging singleton escapes namespace isolation, handlers shared across plugins"
+    severity: HIGH
+    keywords: ["logging", "singleton", "global", "isolation", "handler", "state", "leakage"]
+    impact: "Plugin B inherits Plugin A's handlers, closed file handlers cause I/O errors"
+    function: "create_isolated_namespace"
+    cross_file: ["plugin_loader.py:36-48", "executor.py:17-27", "metrics.py:11-23"]
+
+medium_bugs:
+  - id: pluginpipeline-m1
+    file: stream.py
+    line: 24
+    line_range: [24, 27]
+    type: window_semantic_mismatch
+    category: data_processing
+    cwe: "CWE-682"
+    description: "Stream window semantic mismatch - different modules use inclusive vs exclusive upper bounds for time windows"
+    severity: MEDIUM
+    keywords: ["window", "boundary", "inclusive", "exclusive", "semantic", "mismatch", "tumbling"]
+    impact: "Events at boundaries appear in both windows or neither, incorrect aggregations"
+    function: "add_to_window"
+    cross_file: ["executor.py:17-27", "pipeline.py:23-27", "metrics.py:18-23"]

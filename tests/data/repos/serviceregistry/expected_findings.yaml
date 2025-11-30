@@ -1,0 +1,94 @@
+metadata:
+  repo_name: serviceregistry
+  difficulty: 3
+  total_bugs: 6
+  description: "Microservice discovery and caching layer with health monitoring and request routing"
+  domain: microservices
+  files: 6
+  loc: 420
+
+critical_bugs:
+  - id: serviceregistry-c1
+    file: registry.py
+    line: 45
+    line_range: [42, 58]
+    type: cache_invalidation_race
+    category: concurrency
+    cwe: "CWE-362"
+    description: "Cache invalidation race condition - registry updates timestamp before data, causing cache to serve stale entries that appear fresh"
+    severity: CRITICAL
+    keywords: ["cache", "invalidation", "race", "stale", "timestamp", "concurrent", "freshness"]
+    impact: "Cache serves stale service entries that appear fresh based on timestamp alone"
+    function: "update_services"
+    cross_file: ["cache.py:23-45", "cache.py:67-78"]
+
+  - id: serviceregistry-c2
+    file: auth.py
+    line: 34
+    line_range: [28, 42]
+    type: token_cache_desync
+    category: authentication
+    cwe: "CWE-287"
+    description: "Token refresh cache desynchronization - cache stores old tokens while token manager has fresh tokens"
+    severity: CRITICAL
+    keywords: ["token", "refresh", "cache", "desync", "authentication", "stale", "401"]
+    impact: "Requests use stale tokens despite fresh tokens existing, resulting in 401 authentication errors"
+    function: "refresh_token"
+    cross_file: ["cache.py:45-67", "registry.py:78-92"]
+
+high_bugs:
+  - id: serviceregistry-h1
+    file: health.py
+    line: 34
+    line_range: [30, 48]
+    type: blocking_event_loop
+    category: concurrency
+    cwe: "CWE-833"
+    description: "Health check blocking event loop - synchronous blocking I/O freezes entire event loop preventing concurrent requests"
+    severity: HIGH
+    keywords: ["blocking", "event", "loop", "async", "sync", "io", "freeze", "concurrent"]
+    impact: "Blocking I/O freezes event loop preventing all other concurrent requests from progressing"
+    function: "check_health"
+    cross_file: ["router.py:45-67", "discovery.py:23-34"]
+
+  - id: serviceregistry-h2
+    file: discovery.py
+    line: 56
+    line_range: [52, 68]
+    type: service_resurrection
+    category: state_management
+    cwe: "CWE-662"
+    description: "Service resurrection from file reload - periodic file reload overwrites in-memory down status with stale up status"
+    severity: HIGH
+    keywords: ["resurrection", "reload", "state", "override", "health", "stale", "persistence"]
+    impact: "Dead services come back to life and receive traffic despite being unhealthy"
+    function: "reload_from_file"
+    cross_file: ["registry.py:89-102", "health.py:56-78"]
+
+medium_bugs:
+  - id: serviceregistry-m1
+    file: discovery.py
+    line: 23
+    line_range: [20, 30]
+    type: ttl_unit_mismatch
+    category: configuration
+    cwe: "CWE-704"
+    description: "TTL unit mismatch - discovery sets TTL intending minutes but cache interprets as seconds"
+    severity: MEDIUM
+    keywords: ["ttl", "unit", "mismatch", "minutes", "seconds", "cache", "expiry"]
+    impact: "5-minute TTL becomes 5 seconds, causing excessive cache misses and hammering discovery"
+    function: "set_cache_ttl"
+    cross_file: ["cache.py:15-23"]
+
+low_bugs:
+  - id: serviceregistry-l1
+    file: discovery.py
+    line: 78
+    line_range: [72, 85]
+    type: inconsistent_return_types
+    category: code_quality
+    description: "Inconsistent return types - returns empty dict for no services but empty list for discovery failure"
+    severity: LOW
+    keywords: ["return", "type", "inconsistent", "dict", "list", "error", "handling"]
+    impact: "Callers cannot distinguish between 'no services' and 'discovery system broken'"
+    function: "find_services"

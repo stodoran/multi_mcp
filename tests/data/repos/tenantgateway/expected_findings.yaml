@@ -1,0 +1,83 @@
+metadata:
+  repo_name: tenantgateway
+  difficulty: 4
+  total_bugs: 5
+  description: "Multi-tenant API gateway with tenant isolation, rate limiting, authentication, and circuit breakers"
+  domain: api-gateway
+  files: 10
+  loc: 330
+
+critical_bugs:
+  - id: tenantgateway-c1
+    file: auth.py
+    line: 25
+    line_range: [21, 38]
+    type: tenant_isolation_breach
+    category: security
+    cwe: "CWE-639"
+    owasp: "A01:2021 - Broken Access Control"
+    description: "Tenant isolation breach via shared cache key - small hash space causes collisions enabling tenant impersonation"
+    severity: CRITICAL
+    keywords: ["tenant", "isolation", "breach", "cache", "hash", "collision", "impersonation", "security"]
+    impact: "Tenant B can operate as Tenant A by finding hash collision, accessing their data and quota"
+    function: "authenticate"
+    cross_file: ["gateway.py:14-22", "tenant_manager.py:13-24", "quota_tracker.py:13-21", "rate_limiter.py:17-32"]
+
+  - id: tenantgateway-c2
+    file: rate_limiter.py
+    line: 21
+    line_range: [17, 32]
+    type: distributed_race_quota_overflow
+    category: concurrency
+    cwe: "CWE-362"
+    description: "Distributed rate limit race causing quota overflow - read-modify-write without atomicity on shared Redis"
+    severity: CRITICAL
+    keywords: ["race", "condition", "distributed", "quota", "rate", "limit", "redis", "atomic"]
+    impact: "Tenant gets 200 requests instead of limit=100, quota overflow"
+    function: "check_rate_limit"
+    cross_file: ["quota_tracker.py:13-21", "config_sync.py:13-21", "gateway.py:14-22"]
+
+high_bugs:
+  - id: tenantgateway-h1
+    file: circuit_breaker.py
+    line: 45
+    line_range: [25, 50]
+    type: circuit_state_inconsistency
+    category: distributed_systems
+    cwe: "CWE-362"
+    description: "Circuit breaker state inconsistency - local memory state with lossy pub/sub propagation across instances"
+    severity: HIGH
+    keywords: ["circuit", "breaker", "state", "inconsistency", "pubsub", "distributed", "at-most-once"]
+    impact: "Gateway instances have stale circuit state, continue sending traffic to failed backends"
+    function: "open_circuit"
+    cross_file: ["router.py:19-38", "config_sync.py:15-18", "gateway.py:14-22"]
+
+  - id: tenantgateway-h2
+    file: middleware.py
+    line: 28
+    line_range: [18, 37]
+    type: middleware_chain_bypass
+    category: security
+    cwe: "CWE-670"
+    owasp: "A01:2021 - Broken Access Control"
+    description: "Middleware chain short-circuit bypass - finally block still calls next middleware after exception"
+    severity: HIGH
+    keywords: ["middleware", "chain", "bypass", "exception", "authentication", "rate", "limit"]
+    impact: "Attacker bypasses tenant limits by sending invalid auth, uses default bucket with wrong value"
+    function: "execute_middleware"
+    cross_file: ["gateway.py:14-22", "auth.py:29-30", "router.py:25-38"]
+
+medium_bugs:
+  - id: tenantgateway-m1
+    file: metrics_collector.py
+    line: 18
+    line_range: [13, 27]
+    type: cardinality_explosion
+    category: observability
+    cwe: "CWE-770"
+    description: "Metrics cardinality explosion - error-path adds unbounded request_id dimension, retry multiplies it"
+    severity: MEDIUM
+    keywords: ["metrics", "cardinality", "explosion", "unbounded", "request_id", "error", "retry"]
+    impact: "25 billion time series from error requests, memory exhaustion in metrics system"
+    function: "record_error"
+    cross_file: ["gateway.py:14-22", "tenant_manager.py:13-24", "router.py:24-38"]

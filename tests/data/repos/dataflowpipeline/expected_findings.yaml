@@ -1,0 +1,134 @@
+metadata:
+  repo_name: dataflowpipeline
+  difficulty: 3
+  total_bugs: 9
+  description: "Data transformation framework with validation, transformation, error handling, and rollback"
+  domain: data-pipeline
+  files: 6
+  loc: 450
+
+critical_bugs:
+  - id: dataflowpipeline-c1
+    file: transforms.py
+    line: 34
+    line_range: [30, 40]
+    type: in_place_mutation
+    category: concurrency
+    cwe: "CWE-362"
+    description: "In-place mutation causing data corruption - transforms modify input dictionaries directly instead of creating copies"
+    severity: CRITICAL
+    keywords: ["mutation", "in-place", "concurrent", "parallel", "shared", "corruption", "race"]
+    impact: "Multiple stages mutate shared data in parallel causing unpredictable corruption"
+    function: "apply_transform"
+    cross_file: ["pipeline.py:45-67", "stages.py:56-78"]
+
+  - id: dataflowpipeline-c2
+    file: models.py
+    line: 23
+    line_range: [20, 28]
+    type: precision_loss
+    category: data_integrity
+    cwe: "CWE-681"
+    description: "Silent numeric precision loss - monetary amounts defined as integers but transforms return floats with fractional cents"
+    severity: CRITICAL
+    keywords: ["precision", "loss", "financial", "truncation", "integer", "float", "decimal"]
+    impact: "Cumulative precision loss violates financial calculation requirements, significant discrepancies"
+    function: "FinancialRecord"
+    cross_file: ["transforms.py:67-89"]
+
+  - id: dataflowpipeline-c3
+    file: validators.py
+    line: 45
+    line_range: [42, 52]
+    type: none_propagation
+    category: error_handling
+    cwe: "CWE-476"
+    description: "Transitive None propagation - validators return None for failure but pipeline checks for False, None passes through"
+    severity: CRITICAL
+    keywords: ["none", "null", "propagation", "validation", "failure", "check", "attributeerror"]
+    impact: "None values propagate to transforms causing AttributeError crashes far from validation failure point"
+    function: "validate"
+    cross_file: ["pipeline.py:78-89", "transforms.py:34"]
+
+high_bugs:
+  - id: dataflowpipeline-h1
+    file: handlers.py
+    line: 34
+    line_range: [28, 45]
+    type: partial_rollback
+    category: data_integrity
+    cwe: "CWE-662"
+    description: "Partial rollback leaving inconsistent state - LoaderStage uses no-op rollback while other stages rollback properly"
+    severity: HIGH
+    keywords: ["rollback", "partial", "inconsistent", "state", "referential", "integrity"]
+    impact: "Loaded data remains but validation/transform state is cleared, breaking referential integrity"
+    function: "rollback_all"
+    cross_file: ["stages.py:89-102", "stages.py:115-120"]
+
+  - id: dataflowpipeline-h2
+    file: models.py
+    line: 12
+    line_range: [12, 18]
+    type: schema_version_drift
+    category: data_integrity
+    cwe: "CWE-1104"
+    description: "Schema version drift - models upgraded to v2 with currency field but transforms emit v1 records"
+    severity: HIGH
+    keywords: ["schema", "version", "drift", "upgrade", "compatibility", "migration"]
+    impact: "Downstream consumers expecting v2 records encounter missing field errors"
+    function: "Record"
+    cross_file: ["transforms.py:78-92", "validators.py:23-34"]
+
+  - id: dataflowpipeline-h3
+    file: transforms.py
+    line: 67
+    line_range: [67, 89]
+    type: decimal_precision_loss
+    category: data_integrity
+    cwe: "CWE-681"
+    description: "Decimal precision loss - Decimal values implicitly converted to float during intermediate operations"
+    severity: HIGH
+    keywords: ["decimal", "precision", "float", "conversion", "financial", "currency"]
+    impact: "Accumulated precision loss through multi-stage chains violates financial data integrity"
+    function: "currency_convert"
+    cross_file: ["models.py:23-28"]
+
+medium_bugs:
+  - id: dataflowpipeline-m1
+    file: validators.py
+    line: 23
+    line_range: [23, 45]
+    type: validator_order_dependency
+    category: error_handling
+    description: "Validator execution order dependencies - range validators must run after type validators or get cryptic errors"
+    severity: MEDIUM
+    keywords: ["order", "dependency", "validator", "execution", "sequence", "type"]
+    impact: "Cryptic type mismatch errors instead of clear validation failures"
+    function: "validate_all"
+    cross_file: ["pipeline.py:34-56"]
+
+  - id: dataflowpipeline-m2
+    file: pipeline.py
+    line: 89
+    line_range: [85, 95]
+    type: inconsistent_metrics
+    category: observability
+    description: "Inconsistent metric tracking - pipeline counts all input records, stages count only successful records"
+    severity: MEDIUM
+    keywords: ["metrics", "tracking", "inconsistent", "count", "divergence"]
+    impact: "Monitoring dashboards display inconsistent totals making throughput tracking impossible"
+    function: "process_batch"
+    cross_file: ["stages.py:45-67"]
+
+low_bugs:
+  - id: dataflowpipeline-l1
+    file: transforms.py
+    line: 34
+    line_range: [30, 40]
+    type: misleading_error_message
+    category: code_quality
+    description: "Misleading error message - 'Invalid transform' suggests configuration issue rather than malformed input data"
+    severity: LOW
+    keywords: ["error", "message", "misleading", "confusing", "root", "cause"]
+    impact: "Developers waste time investigating transform setup instead of data schema issues"
+    function: "apply_transform"

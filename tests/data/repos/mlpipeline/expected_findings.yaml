@@ -1,0 +1,80 @@
+metadata:
+  repo_name: mlpipeline
+  difficulty: 5
+  total_bugs: 5
+  description: "Machine learning pipeline with feature stores, model versioning, drift detection, A/B testing, and serving"
+  domain: machine-learning
+  files: 10
+  loc: 1500
+
+critical_bugs:
+  - id: mlpipeline-c1
+    file: preprocessor.py
+    line: 42
+    line_range: [34, 67]
+    type: training_serving_skew
+    category: ml_ops
+    cwe: "CWE-697"
+    description: "Training-serving skew from feature computation mismatch - Pandas pd.cut (right-inclusive) vs bisect (left-inclusive) for boundaries"
+    severity: CRITICAL
+    keywords: ["training", "serving", "skew", "feature", "boundary", "inclusive", "exclusive", "pandas", "bisect"]
+    impact: "Users aged exactly 18, 35, 50 get different feature values in production causing prediction drift"
+    function: "bin_age_offline"
+    cross_file: ["feature_store.py:67", "trainer.py:89", "serving.py:123", "validator.py:78"]
+
+  - id: mlpipeline-c2
+    file: feature_store.py
+    line: 89
+    line_range: [89, 134]
+    type: data_leakage
+    category: ml_ops
+    cwe: "CWE-668"
+    description: "Data leakage from future features - training includes purchases after prediction time, circular reasoning"
+    severity: CRITICAL
+    keywords: ["data", "leakage", "future", "temporal", "time", "filter", "training", "feature"]
+    impact: "Model trained on inflated features underpredicts conversion by 30% in production"
+    function: "compute_user_features"
+    cross_file: ["preprocessor.py:134", "trainer.py:78", "pipeline.py:45"]
+
+  - id: mlpipeline-c3
+    file: feature_store.py
+    line: 23
+    line_range: [23, 89]
+    type: feature_staleness
+    category: ml_ops
+    cwe: "CWE-672"
+    description: "Feature store staleness from TTL misconfiguration - training uses 6-hour window but serving uses 1-hour after cache expiry"
+    severity: CRITICAL
+    keywords: ["feature", "staleness", "ttl", "cache", "window", "aggregation", "mismatch"]
+    impact: "Model expects 6-hour distribution but serving provides 1-hour, drift detector blames concept drift"
+    function: "get_features"
+    cross_file: ["serving.py:45", "preprocessor.py:67", "drift_detector.py:201", "validator.py:156"]
+
+high_bugs:
+  - id: mlpipeline-h1
+    file: model_registry.py
+    line: 89
+    line_range: [89, 102]
+    type: version_mismatch_race
+    category: deployment
+    cwe: "CWE-362"
+    description: "Model version mismatch from registry race - database updates before S3 upload completes causing 404 errors"
+    severity: HIGH
+    keywords: ["version", "mismatch", "race", "registry", "s3", "database", "upload", "deployment"]
+    impact: "Serving nodes fall back to cached N-1 but metrics show N, A/B test results corrupted"
+    function: "deploy_model"
+    cross_file: ["serving.py:45", "serving.py:67", "ab_testing.py:123", "pipeline.py:78"]
+
+  - id: mlpipeline-h2
+    file: drift_detector.py
+    line: 67
+    line_range: [45, 112]
+    type: drift_masking
+    category: ml_ops
+    cwe: "CWE-682"
+    description: "Concept drift undetected due to binned comparison - KS test on binned histograms masks within-bin shifts"
+    severity: HIGH
+    keywords: ["drift", "detection", "binning", "histogram", "ks-test", "statistical", "power"]
+    impact: "Mean shift 35→38 (0.3 std) masked because both in same bin, drift undetected"
+    function: "detect_drift"
+    cross_file: ["metrics_tracker.py:89", "feature_store.py:156", "validator.py:178"]

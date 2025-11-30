@@ -1,0 +1,37 @@
+# ML Pipeline Configuration
+
+# Feature store
+cache:
+  feature_ttl: 3600  # 1 hour - BUG #3: Mismatch with training window
+  cache_warmup_window: 21600  # 6 hours
+
+# Training
+training:
+  batch_window: 21600  # 6 hours - BUG #3: Different from serving
+  snapshot_mode: point_in_time
+  use_future_features: true  # BUG #2: Causes data leakage
+
+# Serving
+serving:
+  aggregation_window: 3600  # 1 hour - BUG #3: Different from training
+  cache_mode: read_through
+  version_poll_interval: 10  # seconds
+  download_timeout: 5  # seconds - BUG #4: Too short for 30s upload
+  download_retries: 3
+
+# Model registry
+registry:
+  async_upload: true  # BUG #4: Fire-and-forget S3 uploads
+  wait_for_upload: false  # BUG #4: Don't wait for S3
+
+# Drift detection
+drift:
+  binning_strategy: uniform
+  num_bins: 20  # BUG #5: Fixed binning loses statistical power
+  comparison_method: ks_test
+  alert_threshold: 0.05
+
+# Features
+features:
+  binning_method_offline: pandas_cut  # BUG #1: pd.cut (right-inclusive)
+  binning_method_online: bisect_left  # BUG #1: bisect (left-inclusive)
