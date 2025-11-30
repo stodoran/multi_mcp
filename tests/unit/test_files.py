@@ -299,9 +299,11 @@ class TestEmbedFilesForExpert:
         assert "<file path=" in result
         assert "relative_path=" in result
         assert "filename=" in result
-        assert "<content>" in result
-        assert "</content>" in result
         assert "</file>" in result
+
+        # Verify content is directly inside file tags (no <content> wrapper)
+        assert "<content>" not in result
+        assert "</content>" not in result
 
     def test_embed_files_path_attributes(self, temp_project):
         """Test that path, relative_path, and filename attributes are correct."""

@@ -93,12 +93,12 @@ test-all:
 
 lint:
 	@echo "Running ruff linter..."
-	uv run ruff check . --exclude archive
+	uv run ruff check .
 
 format:
 	@echo "Formatting code with ruff..."
 	uv run ruff format .
-	uv run ruff check . --exclude archive --fix
+	uv run ruff check . --fix
 
 typecheck:
 	@echo "Running pyright type checker..."

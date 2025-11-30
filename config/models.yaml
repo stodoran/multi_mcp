@@ -35,6 +35,15 @@ models:
       temperature: 1.0
     notes: "Strong general-purpose model, temperature=1.0 only"
 
+  gpt-5.1-codex-mini:
+    litellm_model: openai/gpt-5.1-codex-mini
+    aliases:
+      - codex-mini
+    constraints:
+      temperature: 1.0
+    notes: "Strong general-purpose model, temperature=1.0 only"
+
+
   gpt-5.1-codex:
     litellm_model: openai/gpt-5.1-codex
     aliases:
@@ -84,6 +93,7 @@ models:
   gemini-3-pro-preview:
     litellm_model: gemini/gemini-3-pro-preview
     aliases:
+      - gemini-3-pro
       - gemini-3
       - gemini
     notes: "Latest Google model"

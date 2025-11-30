@@ -7,7 +7,89 @@ from pydantic import ValidationError
 
 from src.schemas.base import ModelResponse, ModelResponseMetadata
 from src.schemas.debate import DebateRequest, DebateResponse
-from src.tools.debate import debate_impl
+from src.tools.debate import _format_debate_prompt, debate_impl
+
+
+class TestFormatDebatePrompt:
+    """Test _format_debate_prompt function for XML formatting."""
+
+    def test_format_debate_prompt_with_xml_tags(self):
+        """Test that debate prompt includes proper XML tags."""
+        original_content = "How do I implement feature X?"
+        step1_results = [
+            ModelResponse(
+                status="success",
+                content="Use approach A with async/await",
+                metadata=ModelResponseMetadata(model="gpt-5-mini", total_tokens=100),
+            ),
+            ModelResponse(
+                status="success",
+                content="Use approach B with threading",
+                metadata=ModelResponseMetadata(model="gemini-2.5-flash", total_tokens=120),
+            ),
+        ]
+
+        formatted = _format_debate_prompt(original_content, step1_results)
+
+        # Verify XML structure
+        assert "<USER_MESSAGE>" in formatted
+        assert "</USER_MESSAGE>" in formatted
+        assert "<PREVIOUS_RESPONSES>" in formatted
+        assert "</PREVIOUS_RESPONSES>" in formatted
+
+        # NEW: Verify individual response tags
+        assert '<response number="1" model="gpt-5-mini">' in formatted
+        assert "</response>" in formatted
+        assert '<response number="2" model="gemini-2.5-flash">' in formatted
+
+        # Verify content is properly wrapped
+        assert "How do I implement feature X?" in formatted
+        assert "Use approach A with async/await" in formatted
+        assert "Use approach B with threading" in formatted
+
+        # Verify NO markdown headers (removed)
+        assert "## Response 1" not in formatted
+        assert "## Response 2" not in formatted
+
+    def test_format_debate_prompt_skips_failed_responses(self):
+        """Test that only successful responses are included."""
+        original_content = "Question?"
+        step1_results = [
+            ModelResponse(status="success", content="Success 1", metadata=ModelResponseMetadata(model="gpt-5-mini")),
+            ModelResponse(status="error", content="", error="Timeout", metadata=ModelResponseMetadata(model="haiku")),
+            ModelResponse(status="success", content="Success 2", metadata=ModelResponseMetadata(model="gemini-2.5-flash")),
+        ]
+
+        formatted = _format_debate_prompt(original_content, step1_results)
+
+        # Should include successful responses (note: numbering is based on position in original list)
+        assert '<response number="1" model="gpt-5-mini">' in formatted
+        assert "Success 1" in formatted
+        assert '<response number="3" model="gemini-2.5-flash">' in formatted  # Position 3 in original list
+        assert "Success 2" in formatted
+
+        # Should not include failed response
+        assert "haiku" not in formatted
+        assert "Timeout" not in formatted
+
+        # Verify NO markdown headers
+        assert "## Response" not in formatted
+
+    def test_format_debate_prompt_handles_unknown_model(self):
+        """Test handling of responses with missing model name in metadata."""
+        original_content = "Question?"
+        step1_results = [
+            ModelResponse(status="success", content="Answer", metadata=ModelResponseMetadata(model=""))  # Empty model name
+        ]
+
+        formatted = _format_debate_prompt(original_content, step1_results)
+
+        # Should use empty string when model name is empty
+        assert '<response number="1" model="">' in formatted
+        assert "Answer" in formatted
+
+        # Verify NO markdown headers
+        assert "## Response" not in formatted
 
 
 class TestDebateSchemas:

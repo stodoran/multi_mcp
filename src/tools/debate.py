@@ -15,22 +15,30 @@ logger = logging.getLogger(__name__)
 def _format_debate_prompt(original_content: str, step1_results: list[ModelResponse]) -> str:
     """Format Step 2 user message with original question and all Step 1 responses.
 
-    Note: Instructions are now in DEBATE_STEP2_PROMPT system prompt.
-    This function only formats the data (original question + responses).
+    Returns XML-formatted content matching debate-step2 prompt expectations.
+    Uses <USER_MESSAGE> and <PREVIOUS_RESPONSES> XML tags for structured input.
+    Each response is wrapped in <response> tag with model and number attributes.
+
+    Format:
+        <response number="1" model="gpt-5-mini">
+        [response content]
+        </response>
     """
-    responses_text = []
+    responses_xml = []
     for i, result in enumerate(step1_results, 1):
         if result.status == "success":
             model_name = result.metadata.model if result.metadata else "Unknown"
-            responses_text.append(f"## Response {i} ({model_name}):\n{result.content}")
+            responses_xml.append(f'<response number="{i}" model="{model_name}">\n{result.content}\n</response>')
 
-    responses_section = "\n\n".join(responses_text)
+    responses_section = "\n\n".join(responses_xml)
 
-    return f"""Original Question:
+    return f"""<USER_MESSAGE>
 {original_content}
+</USER_MESSAGE>
 
-Previous Responses:
+<PREVIOUS_RESPONSES>
 {responses_section}
+</PREVIOUS_RESPONSES>
 """
 
 
@@ -82,11 +90,14 @@ async def debate_impl(
 
     debate_prompt = _format_debate_prompt(content, step1_results)
 
-    # Build Step 2 messages using STANDARD PATTERN
-    # Note: We don't re-add files here since they were already in step1
+    # Build Step 2 messages with FULL context
+    # Models need repository context and files to critique Step 1 responses
+    # escape_html=False to preserve XML tags in debate_prompt
     step2_messages = await (
         MessageBuilder(system_prompt=DEBATE_STEP2_PROMPT, base_path=base_path)
-        .add_user_message(debate_prompt, wrap_xml=False)  # Already formatted
+        .add_repository_context()  # Add CLAUDE.md/AGENTS.md context
+        .add_files(relevant_files)  # Add file contents for code reference
+        .add_user_message(debate_prompt, wrap_xml=False, escape_html=False)  # Contains XML tags
         .build()
     )
 

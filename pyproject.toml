@@ -97,7 +97,7 @@ known-first-party = ["multi_mcp"]
 
 [tool.pyright]
 include = ["src"]
-exclude = ["**/__pycache__", "**/.pytest_cache", "tests/data/samples/"]
+exclude = ["**/__pycache__", "**/.pytest_cache", "tests/data/"]
 typeCheckingMode = "basic"
 reportMissingImports = true
 reportMissingTypeStubs = false

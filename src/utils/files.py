@@ -54,10 +54,7 @@ def embed_files_for_expert(files: list[str], base_path: str | None = None) -> st
             else:
                 relative_path = file_path
 
-            embedded_parts.append(
-                f'<file path="{file_path}" relative_path="{relative_path}" filename="{filename}">\n'
-                f"<content>\n{content}\n</content>\n</file>\n"
-            )
+            embedded_parts.append(f'<file path="{file_path}" relative_path="{relative_path}" filename="{filename}">\n{content}\n</file>\n')
         except Exception:
             continue
 
