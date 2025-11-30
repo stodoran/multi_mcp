@@ -1,7 +1,7 @@
 """Consistent hash ring implementation for distributed key placement."""
 
 import logging
-from typing import List, Optional, Tuple
+
 from .node import CacheNode
 
 logger = logging.getLogger(__name__)
@@ -19,9 +19,9 @@ class ConsistentHashRing:
         Args:
             virtual_nodes: Number of virtual nodes per physical node
         """
-        self._nodes: List[CacheNode] = []
+        self._nodes: list[CacheNode] = []
         self._virtual_nodes = virtual_nodes
-        self._ring: List[Tuple[int, CacheNode]] = []
+        self._ring: list[tuple[int, CacheNode]] = []
         self._collision_map: dict = {}
         logger.info(f"Initialized hash ring with {virtual_nodes} virtual nodes per physical node")
 
@@ -84,7 +84,7 @@ class ConsistentHashRing:
         self._ring.sort(key=lambda x: x[0])
         logger.debug(f"Computed ranges for {len(self._nodes)} nodes")
 
-    def get_nodes_for_key(self, key: str, count: int = 1) -> List[CacheNode]:
+    def get_nodes_for_key(self, key: str, count: int = 1) -> list[CacheNode]:
         """Get nodes responsible for a key.
 
         Args:
@@ -119,7 +119,7 @@ class ConsistentHashRing:
 
         return nodes
 
-    def get_primary_node(self, key: str) -> Optional[CacheNode]:
+    def get_primary_node(self, key: str) -> CacheNode | None:
         """Get primary node for a key.
 
         Args:
@@ -139,7 +139,7 @@ class ConsistentHashRing:
         """
         return len(self._nodes)
 
-    def get_all_nodes(self) -> List[CacheNode]:
+    def get_all_nodes(self) -> list[CacheNode]:
         """Get all nodes in the ring.
 
         Safe copy to prevent external mutation.

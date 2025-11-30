@@ -3,8 +3,8 @@
 This module provides service discovery and health tracking.
 """
 
-from typing import List, Dict, Any, Union, Set
 import logging
+from typing import Any
 
 from .cache import Cache
 
@@ -21,9 +21,9 @@ class ServiceDiscovery:
             cache: Cache instance for service data
         """
         self._cache = cache
-        self._down_services: Set[str] = set()
+        self._down_services: set[str] = set()
 
-    def find_services(self, service_type: str) -> Union[Dict[str, Any], List]:
+    def find_services(self, service_type: str) -> dict[str, Any] | list:
         """Find services of a given type.
 
         Args:
@@ -79,7 +79,7 @@ class ServiceDiscovery:
         self._down_services.discard(service_id)
         logger.info(f"Marked service {service_id} as up")
 
-    def get_down_services(self) -> Set[str]:
+    def get_down_services(self) -> set[str]:
         """Get set of services marked as down.
 
         Returns:
@@ -87,7 +87,7 @@ class ServiceDiscovery:
         """
         return self._down_services.copy()
 
-    def _perform_discovery(self, service_type: str) -> Dict[str, Any]:
+    def _perform_discovery(self, service_type: str) -> dict[str, Any]:
         """Perform actual service discovery.
 
         This is a stub that would query service registry, consul, etc.

@@ -3,9 +3,8 @@ Metrics tracking for ML pipeline
 Tracks model performance, data drift, and system health
 """
 
-import time
 import logging
-from typing import Dict, List, Optional
+import time
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
@@ -18,13 +17,13 @@ class MetricsTracker:
     """
 
     def __init__(self):
-        self._prediction_metrics: List[Dict] = []
-        self._drift_metrics: List[Dict] = []
-        self._model_versions: Dict[str, int] = {}  # model_id -> version
-        self._performance_metrics: Dict[str, List[float]] = defaultdict(list)
+        self._prediction_metrics: list[dict] = []
+        self._drift_metrics: list[dict] = []
+        self._model_versions: dict[str, int] = {}  # model_id -> version
+        self._performance_metrics: dict[str, list[float]] = defaultdict(list)
 
     def record_prediction(self, model_id: str, user_id: int, prediction: float,
-                         actual: Optional[float] = None, version: Optional[int] = None):
+                         actual: float | None = None, version: int | None = None):
         """
         Record prediction
         BUG #4: Records version from metadata, not actual loaded version
@@ -67,7 +66,7 @@ class MetricsTracker:
         if is_drifting:
             logger.warning(f"Drift detected for {feature_name}: p={pvalue:.4f}")
 
-    def get_model_performance(self, model_id: str) -> Dict:
+    def get_model_performance(self, model_id: str) -> dict:
         """Get model performance metrics"""
         # Filter predictions for this model
         model_predictions = [
@@ -89,7 +88,7 @@ class MetricsTracker:
             'active_version': self._model_versions.get(model_id),
         }
 
-    def get_drift_summary(self) -> Dict:
+    def get_drift_summary(self) -> dict:
         """
         Get drift detection summary
         Shows drift status but not underlying comparison details
@@ -105,7 +104,7 @@ class MetricsTracker:
             'drifting_features': drifting_features,
         }
 
-    def get_version_distribution(self, model_id: str) -> Dict:
+    def get_version_distribution(self, model_id: str) -> dict:
         """
         Get distribution of predictions by version
         BUG #4: May show version N but actual version is N-1

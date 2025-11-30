@@ -1,7 +1,6 @@
 """Authentication module with security vulnerabilities."""
 
 import sqlite3
-import hashlib
 
 
 def authenticate_user(username: str, password: str) -> bool:
@@ -42,7 +41,7 @@ def create_user(username: str, password: str) -> bool:
         conn.commit()
         conn.close()
         return True
-    except Exception as e:
+    except Exception:
         conn.close()
         return False
 

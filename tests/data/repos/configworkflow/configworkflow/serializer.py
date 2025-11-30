@@ -4,10 +4,9 @@ This module handles saving and loading workflow state to/from disk.
 """
 
 import json
-import pickle
-from typing import Any, Optional
-from pathlib import Path
 import logging
+import pickle
+from pathlib import Path
 
 from .state import WorkflowState
 
@@ -66,7 +65,7 @@ class StateSerializer:
             logger.error(f"Failed to save state for {workflow_id}: {e}")
             return False
 
-    def load_state(self, workflow_id: str) -> Optional[WorkflowState]:
+    def load_state(self, workflow_id: str) -> WorkflowState | None:
         """Load workflow state from disk.
 
         Args:
@@ -82,7 +81,7 @@ class StateSerializer:
             return None
 
         try:
-            with open(state_file, 'r') as f:
+            with open(state_file) as f:
                 data = json.load(f)
 
             from .state import StateTransition

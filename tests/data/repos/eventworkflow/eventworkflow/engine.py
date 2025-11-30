@@ -1,11 +1,12 @@
 """Workflow engine core implementation."""
 
 import asyncio
-import logging
 import contextvars
-from typing import Dict, Any, Optional, List
+import logging
+from typing import Any
+
 from .saga import Saga
-from .state_machine import StateMachine, WorkflowState
+from .state_machine import StateMachine
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +18,9 @@ class WorkflowEngine:
 
     def __init__(self):
         """Initialize workflow engine."""
-        self._sagas: Dict[str, Saga] = {}
-        self._state_machines: Dict[str, StateMachine] = {}
-        self._locks: Dict[str, asyncio.Lock] = {}
+        self._sagas: dict[str, Saga] = {}
+        self._state_machines: dict[str, StateMachine] = {}
+        self._locks: dict[str, asyncio.Lock] = {}
         logger.info("Initialized workflow engine")
 
     def register_saga(self, saga: Saga) -> None:
@@ -61,7 +62,7 @@ class WorkflowEngine:
         if saga:
             await saga.cancel()
 
-    def get_saga_status(self, saga_id: str) -> Dict[str, Any]:
+    def get_saga_status(self, saga_id: str) -> dict[str, Any]:
         """Get saga execution status."""
         saga = self._sagas.get(saga_id)
         state_machine = self._state_machines.get(saga_id)

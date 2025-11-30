@@ -1,11 +1,12 @@
 """Replication manager for multi-node data replication."""
 
 import logging
-from typing import List, Optional, Dict, Any
-from .node import CacheNode
+from typing import Any
+
 from .hash_ring import ConsistentHashRing
-from .storage import CacheStorage, CacheEntry
+from .node import CacheNode
 from .protocol import CacheProtocol
+from .storage import CacheEntry, CacheStorage
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +40,10 @@ class ReplicationManager:
         self.storage = storage
         self.protocol = protocol
         self.replication_factor = replication_factor
-        self._replication_queue: List[Dict[str, Any]] = []
+        self._replication_queue: list[dict[str, Any]] = []
         logger.info(f"Initialized replication manager with factor {replication_factor}")
 
-    def replicate_write(self, key: str, value: Any, expiry_time: float, metadata: Optional[Dict] = None) -> bool:
+    def replicate_write(self, key: str, value: Any, expiry_time: float, metadata: dict | None = None) -> bool:
         """Replicate a write operation to replica nodes.
 
         Args:
@@ -104,7 +105,7 @@ class ReplicationManager:
 
         return success_count > 0
 
-    def get_replica_nodes(self, key: str) -> List[CacheNode]:
+    def get_replica_nodes(self, key: str) -> list[CacheNode]:
         """Get replica nodes for a key.
 
         Reads hash ring during active rebalancing (potential race).
@@ -118,7 +119,7 @@ class ReplicationManager:
         nodes = self.hash_ring.get_nodes_for_key(key, count=self.replication_factor)
         return [n for n in nodes if n.node_id != self.node.node_id]
 
-    def sync_from_replicas(self, key: str) -> Optional[CacheEntry]:
+    def sync_from_replicas(self, key: str) -> CacheEntry | None:
         """Sync a key from replica nodes.
 
         Args:
@@ -140,7 +141,7 @@ class ReplicationManager:
 
         return None
 
-    def handle_rebalance(self, added_nodes: List[CacheNode], removed_nodes: List[CacheNode]) -> None:
+    def handle_rebalance(self, added_nodes: list[CacheNode], removed_nodes: list[CacheNode]) -> None:
         """Handle ring rebalancing by migrating keys.
 
         Args:
@@ -162,7 +163,7 @@ class ReplicationManager:
             if entry:
                 self.replicate_write(key, entry.value, entry.expiry_time, entry.metadata)
 
-    def get_replication_status(self, key: str) -> Dict[str, Any]:
+    def get_replication_status(self, key: str) -> dict[str, Any]:
         """Get replication status for a key.
 
         Args:

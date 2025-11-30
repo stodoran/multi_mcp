@@ -1,6 +1,6 @@
 """Configuration synchronization."""
 import logging
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ class ConfigSync:
         self._redis = redis_client
         logger.info("Initialized config sync")
 
-    async def publish_event(self, event_type: str, data: Dict[str, Any]) -> None:
+    async def publish_event(self, event_type: str, data: dict[str, Any]) -> None:
         """Publish configuration event."""
         await self._redis.publish(f"{event_type}_events", data)
 

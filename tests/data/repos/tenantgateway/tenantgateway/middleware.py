@@ -1,6 +1,7 @@
 """Middleware chain."""
 import logging
-from typing import Any, List, Dict, Callable
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -8,14 +9,14 @@ class MiddlewareChain:
     """Middleware processing chain."""
 
     def __init__(self):
-        self._middlewares: List[Callable] = []
+        self._middlewares: list[Callable] = []
         logger.info("Initialized middleware chain")
 
     def add_middleware(self, middleware: Callable) -> None:
         """Add middleware to chain."""
         self._middlewares.append(middleware)
 
-    async def process(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def process(self, request: dict[str, Any]) -> dict[str, Any]:
         """Process request through middleware chain.
 
         Error handler short-circuits middleware chain.

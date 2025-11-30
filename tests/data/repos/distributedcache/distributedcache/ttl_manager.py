@@ -1,9 +1,9 @@
 """TTL (Time To Live) management for cache entries."""
 
-import time
 import logging
 import threading
-from typing import Optional
+import time
+
 from .node import CacheNode
 from .storage import CacheStorage
 
@@ -27,7 +27,7 @@ class TTLManager:
         self.node = node
         self.storage = storage
         self.default_ttl = default_ttl
-        self._cleanup_thread: Optional[threading.Thread] = None
+        self._cleanup_thread: threading.Thread | None = None
         self._running = False
         logger.info(f"Initialized TTL manager with default TTL {default_ttl}s")
 
@@ -44,7 +44,7 @@ class TTLManager:
         """
         return self.node._get_current_time() + ttl_seconds
 
-    def set_with_ttl(self, key: str, value: any, ttl: Optional[float] = None) -> None:
+    def set_with_ttl(self, key: str, value: any, ttl: float | None = None) -> None:
         """Store a value with TTL.
 
         Args:
@@ -58,7 +58,7 @@ class TTLManager:
         self.storage.store(key, value, expiry_time)
         logger.debug(f"Set key {key} with TTL {ttl_seconds}s, expires at {expiry_time}")
 
-    def get_ttl(self, key: str) -> Optional[float]:
+    def get_ttl(self, key: str) -> float | None:
         """Get remaining TTL for a key.
 
         Args:
@@ -89,7 +89,7 @@ class TTLManager:
 
         return entry.expiry_time < self.node._get_current_time()
 
-    def refresh_ttl(self, key: str, ttl: Optional[float] = None) -> bool:
+    def refresh_ttl(self, key: str, ttl: float | None = None) -> bool:
         """Refresh TTL for an existing key.
 
         Args:

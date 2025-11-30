@@ -1,7 +1,7 @@
 """Main pipeline orchestration."""
 import logging
 from collections import deque
-from typing import Any, List
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +10,7 @@ class Pipeline:
 
     def __init__(self):
         self._buffer = deque()
-        self._plugins: List[Any] = []
+        self._plugins: list[Any] = []
         logger.info("Initialized pipeline")
 
     def add_plugin(self, plugin: Any) -> None:

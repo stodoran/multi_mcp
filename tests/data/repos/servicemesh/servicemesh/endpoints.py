@@ -4,7 +4,6 @@ Handles endpoint health status and metadata
 """
 
 import time
-from typing import Dict, List, Optional
 from dataclasses import dataclass
 
 
@@ -16,7 +15,7 @@ class Endpoint:
     service_name: str
     healthy: bool = True
     last_health_check: float = 0
-    metadata: Dict = None
+    metadata: dict = None
     ttl: int = 300  # Time-to-live in seconds
 
     def __post_init__(self):
@@ -38,8 +37,8 @@ class EndpointManager:
     """Manages service endpoints and their health status"""
 
     def __init__(self):
-        self._endpoints: Dict[str, List[Endpoint]] = {}
-        self._endpoint_states: Dict[tuple, dict] = {}
+        self._endpoints: dict[str, list[Endpoint]] = {}
+        self._endpoint_states: dict[tuple, dict] = {}
 
     def add_endpoint(self, service_name: str, endpoint: Endpoint):
         """Add an endpoint to the registry"""
@@ -77,13 +76,13 @@ class EndpointManager:
                     endpoint.healthy = True
                     endpoint.last_health_check = time.time()
 
-    def get_healthy_endpoints(self, service_name: str) -> List[Endpoint]:
+    def get_healthy_endpoints(self, service_name: str) -> list[Endpoint]:
         """Get all healthy endpoints for a service"""
         if service_name not in self._endpoints:
             return []
         return [e for e in self._endpoints[service_name] if e.healthy]
 
-    def get_all_endpoints(self, service_name: str) -> List[Endpoint]:
+    def get_all_endpoints(self, service_name: str) -> list[Endpoint]:
         """Get all endpoints for a service, regardless of health"""
         return self._endpoints.get(service_name, [])
 
@@ -93,7 +92,7 @@ class EndpointManager:
         return age < endpoint.ttl
 
     def update_endpoint_metadata(self, service_name: str, host: str, port: int,
-                                 metadata: Dict):
+                                 metadata: dict):
         """Update endpoint metadata"""
         if service_name in self._endpoints:
             for endpoint in self._endpoints[service_name]:

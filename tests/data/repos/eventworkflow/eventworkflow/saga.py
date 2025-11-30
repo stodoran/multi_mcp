@@ -1,10 +1,12 @@
 """Saga implementation for distributed transactions."""
 
 import asyncio
-import logging
 import contextvars
-from typing import List, Any, Optional, Callable, Dict
+import logging
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
+
 from .event_bus import EventBus
 
 logger = logging.getLogger(__name__)
@@ -17,9 +19,9 @@ class SagaStep:
     """Represents a single step in a saga."""
     name: str
     action: Callable
-    compensation: Optional[Callable] = None
+    compensation: Callable | None = None
     args: tuple = ()
-    kwargs: Dict[str, Any] = None
+    kwargs: dict[str, Any] = None
 
     def __post_init__(self):
         if self.kwargs is None:
@@ -33,8 +35,8 @@ class Saga:
         """Initialize saga."""
         self.saga_id = saga_id
         self.event_bus = event_bus
-        self._steps: List[SagaStep] = []
-        self._completed_steps: List[int] = []
+        self._steps: list[SagaStep] = []
+        self._completed_steps: list[int] = []
         self._state_lock = asyncio.Lock()
         self._cancelled = False
         logger.info(f"Created saga {saga_id}")
@@ -89,6 +91,6 @@ class Saga:
         self._cancelled = True
         logger.info(f"Saga {self.saga_id} cancelled")
 
-    def get_completed_steps(self) -> List[int]:
+    def get_completed_steps(self) -> list[int]:
         """Get list of completed step indices."""
         return self._completed_steps.copy()

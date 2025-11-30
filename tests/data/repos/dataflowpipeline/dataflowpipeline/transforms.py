@@ -3,10 +3,10 @@
 This module provides transformation logic for modifying records in the pipeline.
 """
 
-from abc import ABC, abstractmethod
-from typing import Dict, Any, List
-from decimal import Decimal
 import logging
+from abc import ABC, abstractmethod
+from decimal import Decimal
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class Transform(ABC):
     """Base class for data transforms."""
 
     @abstractmethod
-    def transform(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def transform(self, data: dict[str, Any]) -> dict[str, Any]:
         """Transform data.
 
         Args:
@@ -40,7 +40,7 @@ class ScaleTransform(Transform):
         self.field = field
         self.factor = factor
 
-    def transform(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def transform(self, data: dict[str, Any]) -> dict[str, Any]:
         """Scale a numeric field."""
         if data is None:
             raise ValueError("Invalid transform")
@@ -66,7 +66,7 @@ class ScaleTransform(Transform):
 class FilterTransform(Transform):
     """Filters records based on field values."""
 
-    def __init__(self, field: str, allowed_values: List[Any]):
+    def __init__(self, field: str, allowed_values: list[Any]):
         """Initialize with field and allowed values.
 
         Args:
@@ -76,7 +76,7 @@ class FilterTransform(Transform):
         self.field = field
         self.allowed_values = allowed_values
 
-    def transform(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def transform(self, data: dict[str, Any]) -> dict[str, Any]:
         """Filter based on field value."""
         value = data.get(self.field)
 
@@ -99,7 +99,7 @@ class DivisionTransform(Transform):
         self.field = field
         self.divisor = divisor
 
-    def transform(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def transform(self, data: dict[str, Any]) -> dict[str, Any]:
         """Divide a numeric field."""
         if data is None:
             raise ValueError("Invalid transform")
@@ -126,7 +126,7 @@ class CurrencyConversionTransform(Transform):
         self.to_currency = to_currency
         self.rate = rate
 
-    def transform(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def transform(self, data: dict[str, Any]) -> dict[str, Any]:
         """Convert currency."""
         if data is None:
             raise ValueError("Invalid transform")

@@ -1,9 +1,9 @@
 """ConfigWorkflow - Configuration-driven workflow engine with plugin system."""
 
 from .engine import WorkflowEngine
-from .steps import Step, create_step
-from .state import WorkflowState, StateTransition
 from .serializer import StateSerializer
+from .state import StateTransition, WorkflowState
+from .steps import Step, create_step
 
 # BUG #1 (CRITICAL - circular import):
 # We import from config, config imports from plugins for default registration

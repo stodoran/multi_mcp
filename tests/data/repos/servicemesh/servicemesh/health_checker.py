@@ -3,9 +3,9 @@ Health checker for monitoring endpoint availability
 Probes endpoints at regular intervals
 """
 
-import time
 import logging
-from typing import Callable, Dict, Optional
+import time
+
 from .endpoints import Endpoint, EndpointManager
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class HealthChecker:
         self.timeout = timeout
         self.unhealthy_threshold = unhealthy_threshold
 
-        self._check_history: Dict[str, list] = {}
+        self._check_history: dict[str, list] = {}
         self._detailed_metrics_enabled = False  # BUG #3: Disabled by default
 
     def probe_endpoint(self, service_name: str, endpoint: Endpoint) -> bool:

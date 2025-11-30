@@ -3,8 +3,8 @@
 This module manages workflow plugins and extensions.
 """
 
-from typing import Dict, Callable, Any
 import logging
+from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ class PluginRegistry:
     """Registry for workflow plugins."""
 
     _instance = None
-    _plugins: Dict[str, Callable] = {}
+    _plugins: dict[str, Callable] = {}
 
     def __new__(cls):
         """Singleton pattern for plugin registry."""
@@ -56,7 +56,7 @@ class PluginRegistry:
         return plugin
 
     @classmethod
-    def list_plugins(cls) -> Dict[str, Callable]:
+    def list_plugins(cls) -> dict[str, Callable]:
         """List all registered plugins."""
         if not hasattr(cls, '_plugins'):
             cls._plugins = {}

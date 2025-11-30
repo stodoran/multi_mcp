@@ -4,9 +4,8 @@ Handles feature transformation and normalization
 """
 
 import bisect
-import time
 import logging
-from typing import Dict, List, Any, Optional
+
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -56,7 +55,7 @@ class Preprocessor:
         bucket = bisect.bisect_left([18, 35, 50, 100], age)
         return bucket
 
-    def batch_compute_features(self, df: pd.DataFrame, mode: Optional[str] = None) -> pd.DataFrame:
+    def batch_compute_features(self, df: pd.DataFrame, mode: str | None = None) -> pd.DataFrame:
         """
         Batch feature computation for training
         BUG #1: Uses pd.cut with different boundary semantics than bisect
@@ -81,7 +80,7 @@ class Preprocessor:
         return df
 
     def compute_time_features(self, df: pd.DataFrame, event_timestamp: float,
-                             mode: Optional[str] = None) -> pd.DataFrame:
+                             mode: str | None = None) -> pd.DataFrame:
         """
         Compute time-based features
         BUG #2: Time filtering disabled for training
@@ -148,7 +147,7 @@ class Preprocessor:
         required_columns = ['age', 'age_bucket']
         return all(col in df.columns for col in required_columns)
 
-    def get_preprocessing_config(self) -> Dict:
+    def get_preprocessing_config(self) -> dict:
         """Get preprocessing configuration"""
         return {
             'mode': self.mode,

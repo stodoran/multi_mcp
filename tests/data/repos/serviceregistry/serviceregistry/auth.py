@@ -3,9 +3,8 @@
 This module manages authentication tokens for service requests.
 """
 
-import time
-from typing import Optional, Dict
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +18,11 @@ class TokenManager:
         Args:
             token_ttl: Token time-to-live in seconds (default 1 hour)
         """
-        self._tokens: Dict[str, str] = {}
-        self._expiry: Dict[str, float] = {}
+        self._tokens: dict[str, str] = {}
+        self._expiry: dict[str, float] = {}
         self._token_ttl = token_ttl
 
-    def get_token(self, service_id: str) -> Optional[str]:
+    def get_token(self, service_id: str) -> str | None:
         """Get valid token for a service.
 
         Args:

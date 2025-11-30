@@ -1,6 +1,6 @@
 """Plugin isolation mechanisms."""
-import sys
 import logging
+import sys
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 """Request routing."""
 import logging
 import uuid
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -10,14 +10,14 @@ class RequestRouter:
 
     def __init__(self, circuit_breaker: Any):
         self._circuit_breaker = circuit_breaker
-        self._backends: Dict[str, str] = {}
+        self._backends: dict[str, str] = {}
         logger.info("Initialized request router")
 
     def add_backend(self, name: str, url: str) -> None:
         """Add backend service."""
         self._backends[name] = url
 
-    async def route(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def route(self, request: dict[str, Any]) -> dict[str, Any]:
         """Route request to backend."""
         if "request_id" not in request:
             request["request_id"] = str(uuid.uuid4())
@@ -29,10 +29,10 @@ class RequestRouter:
 
         return {"status": 503, "error": "Service unavailable"}
 
-    def _select_backend(self, request: Dict[str, Any]) -> str:
+    def _select_backend(self, request: dict[str, Any]) -> str:
         """Select backend for request."""
         return list(self._backends.values())[0] if self._backends else "default"
 
-    async def _forward_to_backend(self, backend: str, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def _forward_to_backend(self, backend: str, request: dict[str, Any]) -> dict[str, Any]:
         """Forward request to backend."""
         return {"status": 200, "data": "success"}

@@ -3,10 +3,9 @@ Load balancer with multiple strategies
 Supports round-robin, random, and sticky session routing
 """
 
-import hashlib
-import random
 import os
-from typing import List, Optional
+import random
+
 from .endpoints import Endpoint
 
 # Set hash seed for "deterministic routing"
@@ -28,8 +27,8 @@ class LoadBalancer:
         self._session_map: dict = {}  # session_id -> endpoint_index
         self._round_robin_index = 0
 
-    def select_endpoint(self, endpoints: List[Endpoint],
-                       session_id: Optional[str] = None) -> Optional[Endpoint]:
+    def select_endpoint(self, endpoints: list[Endpoint],
+                       session_id: str | None = None) -> Endpoint | None:
         """
         Select an endpoint based on configured strategy
         BUG #4: Sticky sessions create uneven distribution
@@ -56,7 +55,7 @@ class LoadBalancer:
         else:
             return self._select_round_robin(healthy_endpoints)
 
-    def _select_sticky(self, endpoints: List[Endpoint], session_id: str) -> Endpoint:
+    def _select_sticky(self, endpoints: list[Endpoint], session_id: str) -> Endpoint:
         """
         Sticky session selection using hash-based routing
         BUG #4: hash(session_id) % num_endpoints causes birthday paradox distribution
@@ -78,17 +77,17 @@ class LoadBalancer:
 
         return endpoints[endpoint_index]
 
-    def _select_round_robin(self, endpoints: List[Endpoint]) -> Endpoint:
+    def _select_round_robin(self, endpoints: list[Endpoint]) -> Endpoint:
         """Round-robin selection"""
         endpoint = endpoints[self._round_robin_index % len(endpoints)]
         self._round_robin_index += 1
         return endpoint
 
-    def _select_random(self, endpoints: List[Endpoint]) -> Endpoint:
+    def _select_random(self, endpoints: list[Endpoint]) -> Endpoint:
         """Random selection"""
         return random.choice(endpoints)
 
-    def _select_least_connections(self, endpoints: List[Endpoint]) -> Endpoint:
+    def _select_least_connections(self, endpoints: list[Endpoint]) -> Endpoint:
         """Least connections selection (simplified)"""
         # In real implementation, would track active connections per endpoint
         # For now, use random as fallback
@@ -106,13 +105,13 @@ class LoadBalancer:
         # Clear session map to force rehashing
         self._session_map.clear()
 
-    def get_session_distribution(self, endpoints: List[Endpoint],
-                                sessions: List[str]) -> dict:
+    def get_session_distribution(self, endpoints: list[Endpoint],
+                                sessions: list[str]) -> dict:
         """
         Get distribution of sessions across endpoints
         Used for monitoring (but doesn't alert on imbalance)
         """
-        distribution = {i: 0 for i in range(len(endpoints))}
+        distribution = dict.fromkeys(range(len(endpoints)), 0)
 
         for session_id in sessions:
             hash_value = hash(session_id)

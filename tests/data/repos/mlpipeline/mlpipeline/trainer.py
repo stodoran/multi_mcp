@@ -3,9 +3,10 @@ Model trainer
 Handles model training with hyperparameter tracking
 """
 
-import time
 import logging
-from typing import Dict, List, Optional, Any
+import time
+from typing import Any
+
 from .feature_store import FeatureStore
 from .preprocessor import Preprocessor
 
@@ -28,8 +29,8 @@ class Trainer:
             'snapshot_mode': 'point_in_time',
         }
 
-    def train_model(self, user_ids: List[int], labels: List[int],
-                   event_timestamps: List[float]) -> Dict:
+    def train_model(self, user_ids: list[int], labels: list[int],
+                   event_timestamps: list[float]) -> dict:
         """
         Train model on batch data
         BUG #1: Uses features computed with pd.cut (different from serving)
@@ -71,7 +72,7 @@ class Trainer:
             'metadata': metadata,
         }
 
-    def _fit_model(self, features: Any, labels: List[int]) -> Any:
+    def _fit_model(self, features: Any, labels: list[int]) -> Any:
         """
         Fit ML model
         Simplified - in reality would use sklearn, xgboost, etc.
@@ -90,7 +91,7 @@ class Trainer:
 
         return model
 
-    def validate_training_data(self, features: List[Dict], labels: List[int]) -> bool:
+    def validate_training_data(self, features: list[dict], labels: list[int]) -> bool:
         """
         Validate training data
         Note: Only checks nulls, not temporal consistency
@@ -105,7 +106,7 @@ class Trainer:
 
         return True
 
-    def get_training_stats(self) -> Dict:
+    def get_training_stats(self) -> dict:
         """Get training statistics"""
         return {
             'batch_window': self._training_config['batch_window'],

@@ -1,12 +1,14 @@
-from typing import Any, Dict, Optional
+from typing import Any
+
 from .config import get_settings
 from .models import Item, parse_item
 from .storage import save_item_dict, set_last_item
 
+
 class ServiceError(RuntimeError):
     pass
 
-async def process_item(payload: Dict[str, Any]) -> Optional[Item]:
+async def process_item(payload: dict[str, Any]) -> Item | None:
     settings = get_settings()
     try:
         item = parse_item(payload)

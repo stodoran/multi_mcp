@@ -1,7 +1,7 @@
 """Resource pooling for database connections."""
 import asyncio
 import logging
-from typing import Any, List
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ class ResourcePool:
         Pool size tuned for concurrent tasks.
         """
         self._max_size = max_size
-        self._available: List[Any] = []
+        self._available: list[Any] = []
         self._semaphore = asyncio.Semaphore(max_size)
         logger.info(f"Initialized resource pool (size={max_size})")
 

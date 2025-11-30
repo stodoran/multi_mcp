@@ -1,6 +1,6 @@
 """Tenant management."""
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -8,15 +8,15 @@ class TenantManager:
     """Manages tenant configurations."""
 
     def __init__(self):
-        self._tenants: Dict[str, Dict[str, Any]] = {}
+        self._tenants: dict[str, dict[str, Any]] = {}
         logger.info("Initialized tenant manager")
 
-    def register_tenant(self, tenant_id: str, config: Dict[str, Any]) -> None:
+    def register_tenant(self, tenant_id: str, config: dict[str, Any]) -> None:
         """Register a tenant."""
         self._tenants[tenant_id] = config
         logger.info(f"Registered tenant {tenant_id}")
 
-    def get_tenant(self, tenant_id: str) -> Optional[Dict[str, Any]]:
+    def get_tenant(self, tenant_id: str) -> dict[str, Any] | None:
         """Get tenant configuration."""
         return self._tenants.get(tenant_id)
 

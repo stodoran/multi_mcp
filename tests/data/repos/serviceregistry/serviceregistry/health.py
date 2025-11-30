@@ -3,10 +3,8 @@
 This module performs health checks on registered services.
 """
 
-import urllib.request
-import asyncio
-from typing import Dict, Optional
 import logging
+import urllib.request
 
 from .discovery import ServiceDiscovery
 
@@ -32,7 +30,7 @@ class HealthChecker:
         self._discovery = discovery
         self._check_timeout = check_timeout
         self._check_interval = check_interval
-        self._health_status: Dict[str, bool] = {}
+        self._health_status: dict[str, bool] = {}
 
     async def check_service_health(
         self,
@@ -77,8 +75,8 @@ class HealthChecker:
 
     async def check_all_services(
         self,
-        services: Dict[str, Dict[str, any]]
-    ) -> Dict[str, bool]:
+        services: dict[str, dict[str, any]]
+    ) -> dict[str, bool]:
         """Check health of all services.
 
         Args:
@@ -99,7 +97,7 @@ class HealthChecker:
 
         return results
 
-    def get_health_status(self, service_id: str) -> Optional[bool]:
+    def get_health_status(self, service_id: str) -> bool | None:
         """Get cached health status for a service.
 
         Args:
@@ -110,7 +108,7 @@ class HealthChecker:
         """
         return self._health_status.get(service_id)
 
-    def get_all_health_status(self) -> Dict[str, bool]:
+    def get_all_health_status(self) -> dict[str, bool]:
         """Get health status for all checked services.
 
         Returns:

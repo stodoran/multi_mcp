@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+
 
 @dataclass
 class Settings:
@@ -7,7 +7,7 @@ class Settings:
     storage_dir_name: str = "data"
     enable_cache: bool = True
 
-_cached_settings: Optional[Settings] = None
+_cached_settings: Settings | None = None
 
 def get_settings() -> Settings:
     global _cached_settings

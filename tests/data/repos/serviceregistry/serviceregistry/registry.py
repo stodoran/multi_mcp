@@ -4,13 +4,13 @@ This module maintains a registry of available services and their metadata.
 """
 
 import json
-import time
-from typing import List, Dict, Any, Optional
-from pathlib import Path
 import logging
+import time
+from pathlib import Path
+from typing import Any
 
-from .cache import Cache
 from .auth import TokenManager
+from .cache import Cache
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class ServiceRegistry:
         self,
         cache: Cache,
         token_manager: TokenManager,
-        persistence_path: Optional[str] = None
+        persistence_path: str | None = None
     ):
         """Initialize service registry.
 
@@ -31,7 +31,7 @@ class ServiceRegistry:
             token_manager: Token manager for auth
             persistence_path: Optional path to persist service list
         """
-        self._services: Dict[str, Dict[str, Any]] = {}
+        self._services: dict[str, dict[str, Any]] = {}
         self._cache = cache
         self._token_manager = token_manager
         self._persistence_path = persistence_path
@@ -45,7 +45,7 @@ class ServiceRegistry:
         service_id: str,
         host: str,
         port: int,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None
     ) -> None:
         """Register a new service instance.
 
@@ -76,7 +76,7 @@ class ServiceRegistry:
         if self._persistence_path:
             self._save_to_file()
 
-    def get_service(self, service_id: str) -> Optional[Dict[str, Any]]:
+    def get_service(self, service_id: str) -> dict[str, Any] | None:
         """Get service information.
 
         Args:
@@ -131,7 +131,7 @@ class ServiceRegistry:
     def _load_from_file(self) -> None:
         """Load services from persistence file."""
         try:
-            with open(self._persistence_path, 'r') as f:
+            with open(self._persistence_path) as f:
                 data = json.load(f)
                 self._services = data.get('services', {})
                 self._last_update = time.time()
@@ -150,7 +150,7 @@ class ServiceRegistry:
         except Exception as e:
             logger.error(f"Failed to save services to file: {e}")
 
-    def list_services(self) -> List[Dict[str, Any]]:
+    def list_services(self) -> list[dict[str, Any]]:
         """List all registered services.
 
         Returns:

@@ -1,10 +1,10 @@
 """Cache node implementation with health checking and coordination."""
 
-import time
 import logging
 import multiprocessing
-from typing import Any, Dict, List, Optional
-from dataclasses import dataclass, field
+import time
+from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,8 @@ class CacheNode:
         self.node_id = config.node_id
         self.is_healthy = True
         self.last_heartbeat = time.time()
-        self._metadata: Dict[str, Any] = {}
-        self._peer_nodes: List['CacheNode'] = []
+        self._metadata: dict[str, Any] = {}
+        self._peer_nodes: list[CacheNode] = []
 
         logger.info(f"Initialized node {self.node_id} at {config.host}:{config.port}")
 
@@ -83,7 +83,7 @@ class CacheNode:
         self._peer_nodes = [p for p in self._peer_nodes if p.node_id != peer_id]
         logger.info(f"Node {self.node_id} removed peer {peer_id}")
 
-    def get_peers(self) -> List['CacheNode']:
+    def get_peers(self) -> list['CacheNode']:
         """Get list of peer nodes.
 
         Returns:
@@ -115,7 +115,7 @@ class CacheNode:
         self.is_healthy = True
         return True
 
-    def get_metadata(self, key: str) -> Optional[Any]:
+    def get_metadata(self, key: str) -> Any | None:
         """Get node metadata value.
 
         Args:
@@ -161,7 +161,7 @@ class CacheNode:
         """
         return len(self._peer_nodes) + 1
 
-    def get_node_info(self) -> Dict[str, Any]:
+    def get_node_info(self) -> dict[str, Any]:
         """Get node information.
 
         Returns:

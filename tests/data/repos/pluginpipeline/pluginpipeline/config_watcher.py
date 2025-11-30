@@ -1,7 +1,6 @@
 """Configuration file watcher."""
 import logging
 import time
-from typing import Callable
 
 logger = logging.getLogger(__name__)
 

@@ -4,9 +4,9 @@ Manages gradual model rollouts and traffic splitting
 """
 
 import logging
-from typing import Dict, Optional
-from .serving import ServingEngine
+
 from .model_registry import ModelRegistry
+from .serving import ServingEngine
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class ABTestingController:
 
     def __init__(self, model_registry: ModelRegistry):
         self.model_registry = model_registry
-        self._experiments: Dict[str, Dict] = {}
+        self._experiments: dict[str, dict] = {}
 
     def create_experiment(self, experiment_id: str, model_id: str,
                          control_version: int, treatment_version: int,
@@ -85,7 +85,7 @@ class ABTestingController:
         # In real implementation, would write to analytics database
         logger.debug(f"User {user_id} assigned to {variant} (version {version})")
 
-    def get_experiment_results(self, experiment_id: str) -> Dict:
+    def get_experiment_results(self, experiment_id: str) -> dict:
         """
         Get experiment results
         BUG #4: Results may be corrupted due to version mismatch

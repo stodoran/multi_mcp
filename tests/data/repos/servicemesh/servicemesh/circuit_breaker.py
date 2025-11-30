@@ -3,9 +3,8 @@ Circuit breaker pattern implementation
 Prevents cascading failures by opening circuit after threshold
 """
 
-import time
 import logging
-from typing import Optional, Dict
+import time
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -36,7 +35,7 @@ class CircuitBreaker:
         self._opened_at = 0
 
         # Distributed state tracking (for coordination across instances)
-        self._distributed_state: Dict[str, any] = {
+        self._distributed_state: dict[str, any] = {
             'state': 'closed',
             'opened_at': 0,
         }

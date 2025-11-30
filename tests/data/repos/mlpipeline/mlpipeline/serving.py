@@ -3,9 +3,10 @@ Model serving engine
 Handles online prediction requests
 """
 
-import time
 import logging
-from typing import Dict, Optional, Any
+import time
+from typing import Any
+
 from .feature_store import FeatureStore
 from .model_registry import ModelRegistry
 
@@ -26,8 +27,8 @@ class ServingEngine:
         self.feature_store = feature_store
         self.model_registry = model_registry
 
-        self._model_cache: Dict[int, Any] = {}  # version -> model
-        self._current_version: Optional[int] = None
+        self._model_cache: dict[int, Any] = {}  # version -> model
+        self._current_version: int | None = None
         self._version_poll_interval = 10  # Poll database every 10 seconds
         self._last_poll_time = 0
 
@@ -56,7 +57,7 @@ class ServingEngine:
 
         return prediction
 
-    def _get_loaded_model(self) -> Optional[Any]:
+    def _get_loaded_model(self) -> Any | None:
         """
         Get loaded model, checking for version updates
         BUG #4: Race condition with database vs S3
@@ -91,7 +92,7 @@ class ServingEngine:
             # Clear cache to force reload
             self._model_cache.clear()
 
-    def _load_model(self) -> Optional[Any]:
+    def _load_model(self) -> Any | None:
         """
         Load model from registry
         BUG #4: Download may fail if S3 upload not complete
@@ -121,7 +122,7 @@ class ServingEngine:
 
         return model
 
-    def _download_with_retry(self, version: int, retries: int = 3) -> Optional[Any]:
+    def _download_with_retry(self, version: int, retries: int = 3) -> Any | None:
         """
         Download model with retry
         BUG #4: Retries too fast (1s delay × 3 = 3s total), upload takes 30s
@@ -143,7 +144,7 @@ class ServingEngine:
 
         return None
 
-    def _predict_with_model(self, model: Any, features: Dict) -> float:
+    def _predict_with_model(self, model: Any, features: dict) -> float:
         """Make prediction with loaded model"""
         # Simplified prediction logic
         # In real implementation: model.predict(features)
@@ -161,7 +162,7 @@ class ServingEngine:
 
         return prediction
 
-    def get_loaded_model_version(self) -> Optional[int]:
+    def get_loaded_model_version(self) -> int | None:
         """Get currently loaded model version"""
         if self._model_cache:
             # Return version of cached model

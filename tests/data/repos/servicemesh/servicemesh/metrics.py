@@ -3,9 +3,8 @@ Metrics collection and aggregation
 Tracks service mesh performance metrics
 """
 
-import time
 import logging
-from typing import Dict, List, Optional
+import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 
@@ -18,7 +17,7 @@ class MetricPoint:
     name: str
     value: float
     timestamp: float = field(default_factory=time.time)
-    tags: Dict = field(default_factory=dict)
+    tags: dict = field(default_factory=dict)
 
 
 class MetricsCollector:
@@ -28,49 +27,49 @@ class MetricsCollector:
     """
 
     def __init__(self):
-        self._counters: Dict[str, float] = defaultdict(float)
-        self._gauges: Dict[str, float] = {}
-        self._histograms: Dict[str, List[float]] = defaultdict(list)
-        self._timers: Dict[str, List[float]] = defaultdict(list)
+        self._counters: dict[str, float] = defaultdict(float)
+        self._gauges: dict[str, float] = {}
+        self._histograms: dict[str, list[float]] = defaultdict(list)
+        self._timers: dict[str, list[float]] = defaultdict(list)
 
-    def increment_counter(self, name: str, value: float = 1.0, tags: Optional[Dict] = None):
+    def increment_counter(self, name: str, value: float = 1.0, tags: dict | None = None):
         """Increment a counter metric"""
         key = self._make_key(name, tags)
         self._counters[key] += value
 
-    def set_gauge(self, name: str, value: float, tags: Optional[Dict] = None):
+    def set_gauge(self, name: str, value: float, tags: dict | None = None):
         """Set a gauge metric"""
         key = self._make_key(name, tags)
         self._gauges[key] = value
 
-    def record_histogram(self, name: str, value: float, tags: Optional[Dict] = None):
+    def record_histogram(self, name: str, value: float, tags: dict | None = None):
         """Record a histogram value"""
         key = self._make_key(name, tags)
         self._histograms[key].append(value)
 
-    def record_timer(self, name: str, duration: float, tags: Optional[Dict] = None):
+    def record_timer(self, name: str, duration: float, tags: dict | None = None):
         """Record a timing measurement"""
         key = self._make_key(name, tags)
         self._timers[key].append(duration)
 
-    def _make_key(self, name: str, tags: Optional[Dict]) -> str:
+    def _make_key(self, name: str, tags: dict | None) -> str:
         """Create metric key from name and tags"""
         if not tags:
             return name
         tag_str = ','.join(f"{k}={v}" for k, v in sorted(tags.items()))
         return f"{name}[{tag_str}]"
 
-    def get_counter(self, name: str, tags: Optional[Dict] = None) -> float:
+    def get_counter(self, name: str, tags: dict | None = None) -> float:
         """Get counter value"""
         key = self._make_key(name, tags)
         return self._counters.get(key, 0.0)
 
-    def get_gauge(self, name: str, tags: Optional[Dict] = None) -> Optional[float]:
+    def get_gauge(self, name: str, tags: dict | None = None) -> float | None:
         """Get gauge value"""
         key = self._make_key(name, tags)
         return self._gauges.get(key)
 
-    def get_histogram_stats(self, name: str, tags: Optional[Dict] = None) -> Dict:
+    def get_histogram_stats(self, name: str, tags: dict | None = None) -> dict:
         """
         Get histogram statistics
         BUG #3: Aggregated metrics hide percentile distributions
@@ -95,7 +94,7 @@ class MetricsCollector:
             # 'p99': self._percentile(values, 99),
         }
 
-    def get_timer_stats(self, name: str, tags: Optional[Dict] = None) -> Dict:
+    def get_timer_stats(self, name: str, tags: dict | None = None) -> dict:
         """Get timer statistics"""
         key = self._make_key(name, tags)
         values = self._timers.get(key, [])
@@ -110,7 +109,7 @@ class MetricsCollector:
             'mean': sum(values) / len(values),
         }
 
-    def _percentile(self, values: List[float], p: float) -> float:
+    def _percentile(self, values: list[float], p: float) -> float:
         """Calculate percentile (not used due to performance concerns)"""
         sorted_values = sorted(values)
         index = int(len(sorted_values) * p / 100)
@@ -164,7 +163,7 @@ class MetricsCollector:
         # BUG #4: Per-endpoint counts tracked but no alerting on distribution
         self.record_timer('request.duration', duration, {'service': service_name})
 
-    def get_all_metrics(self) -> Dict:
+    def get_all_metrics(self) -> dict:
         """Get all collected metrics"""
         return {
             'counters': dict(self._counters),

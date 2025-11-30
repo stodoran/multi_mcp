@@ -1,13 +1,13 @@
 """Rate limiting."""
 import logging
-from typing import Dict, Any
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 class RateLimiter:
     """Rate limits requests."""
 
-    def __init__(self, redis_client: Any, limits: Dict[str, int]):
+    def __init__(self, redis_client: Any, limits: dict[str, int]):
         self._redis = redis_client
         self._limits = limits
         logger.info("Initialized rate limiter")

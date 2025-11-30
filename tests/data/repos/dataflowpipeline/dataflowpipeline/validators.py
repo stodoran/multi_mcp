@@ -3,9 +3,9 @@
 This module provides validation logic for data records.
 """
 
-from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
 import logging
+from abc import ABC, abstractmethod
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ class Validator(ABC):
     """Base class for data validators."""
 
     @abstractmethod
-    def validate(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def validate(self, data: dict[str, Any]) -> dict[str, Any] | None:
         """Validate data and return it if valid.
 
         Returns:
@@ -26,7 +26,7 @@ class Validator(ABC):
 class TypeValidator(Validator):
     """Validates that required fields have correct types."""
 
-    def __init__(self, required_fields: Dict[str, type]):
+    def __init__(self, required_fields: dict[str, type]):
         """Initialize with required field types.
 
         Args:
@@ -34,7 +34,7 @@ class TypeValidator(Validator):
         """
         self.required_fields = required_fields
 
-    def validate(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def validate(self, data: dict[str, Any]) -> dict[str, Any] | None:
         """Validate field types.
 
         Returns:
@@ -70,7 +70,7 @@ class RangeValidator(Validator):
         self.min_val = min_val
         self.max_val = max_val
 
-    def validate(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def validate(self, data: dict[str, Any]) -> dict[str, Any] | None:
         """Validate field is in range.
 
         Returns:
@@ -103,7 +103,7 @@ class SchemaValidator(Validator):
         """Initialize with optional required version."""
         self.required_version = required_version
 
-    def validate(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def validate(self, data: dict[str, Any]) -> dict[str, Any] | None:
         """Validate schema version."""
         version = data.get('_schema_version', 1)
 

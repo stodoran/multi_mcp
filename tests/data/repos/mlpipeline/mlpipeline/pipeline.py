@@ -4,16 +4,16 @@ Coordinates training, serving, and monitoring
 """
 
 import logging
-from typing import Dict, List, Optional, Any
-from .feature_store import FeatureStore
-from .model_registry import ModelRegistry
-from .drift_detector import DriftDetector
-from .trainer import Trainer
-from .serving import ServingEngine
+from typing import Any
+
 from .ab_testing import ABTestingController
-from .preprocessor import Preprocessor
-from .validator import Validator
+from .drift_detector import DriftDetector
+from .feature_store import FeatureStore
 from .metrics_tracker import MetricsTracker
+from .model_registry import ModelRegistry
+from .serving import ServingEngine
+from .trainer import Trainer
+from .validator import Validator
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +47,8 @@ class Pipeline:
         # A/B testing
         self.ab_testing = ABTestingController(self.model_registry)
 
-    def train(self, user_ids: List[int], labels: List[int],
-             event_timestamps: List[float]) -> Dict:
+    def train(self, user_ids: list[int], labels: list[int],
+             event_timestamps: list[float]) -> dict:
         """
         Train model
         BUG #1: Uses training features (pd.cut)
@@ -102,7 +102,7 @@ class Pipeline:
 
         return prediction
 
-    def check_drift(self, train_data: Any, prod_data: Any, feature_name: str = "age") -> Dict:
+    def check_drift(self, train_data: Any, prod_data: Any, feature_name: str = "age") -> dict:
         """
         Check for distribution drift
         BUG #5: Uses binned comparison, misses subtle shifts
@@ -147,7 +147,7 @@ class Pipeline:
             traffic_split
         )
 
-    def warm_cache(self, user_ids: List[int]):
+    def warm_cache(self, user_ids: list[int]):
         """
         Warm feature cache
         BUG #3: Cache warmed with 1h TTL, but training uses 6h window
@@ -155,7 +155,7 @@ class Pipeline:
         logger.info(f"Warming cache for {len(user_ids)} users")
         self.feature_store.warm_cache(user_ids)
 
-    def get_pipeline_stats(self) -> Dict:
+    def get_pipeline_stats(self) -> dict:
         """Get comprehensive pipeline statistics"""
         return {
             'model_id': self.model_id,
@@ -165,7 +165,7 @@ class Pipeline:
             'training_stats': self.trainer.get_training_stats(),
         }
 
-    def validate_pipeline(self) -> Dict:
+    def validate_pipeline(self) -> dict:
         """
         Validate pipeline health
         DECOY: Runs validators but they miss the bugs

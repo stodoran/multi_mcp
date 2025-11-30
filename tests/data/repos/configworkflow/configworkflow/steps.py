@@ -3,8 +3,9 @@
 This module provides step creation and execution logic.
 """
 
-from typing import Callable, Any, Dict
 import logging
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ class Step:
         name: str,
         func: Callable,
         args: tuple = (),
-        kwargs: Dict[str, Any] = None
+        kwargs: dict[str, Any] = None
     ):
         """Initialize a workflow step.
 

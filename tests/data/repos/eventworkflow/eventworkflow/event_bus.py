@@ -1,9 +1,10 @@
 """Event bus for pub/sub messaging."""
 
 import asyncio
-import logging
 import contextvars
-from typing import Dict, Set, Callable, Any
+import logging
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ class EventBus:
 
     def __init__(self):
         """Initialize event bus."""
-        self._subscribers: Dict[str, Set[Callable]] = {}
+        self._subscribers: dict[str, set[Callable]] = {}
         logger.info("Initialized event bus")
 
     def subscribe(self, event_type: str, handler: Callable) -> None:

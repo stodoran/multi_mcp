@@ -1,9 +1,9 @@
 """Cache storage implementation with TTL support."""
 
-import time
 import logging
-from typing import Any, Dict, Optional, Set
+import time
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class CacheEntry:
     value: Any
     expiry_time: float
     created_at: float
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
 
 class CacheStorage:
@@ -26,11 +26,11 @@ class CacheStorage:
 
     def __init__(self):
         """Initialize cache storage."""
-        self._data: Dict[str, CacheEntry] = {}
-        self._callbacks: Set = set()
+        self._data: dict[str, CacheEntry] = {}
+        self._callbacks: set = set()
         logger.info("Initialized cache storage")
 
-    def store(self, key: str, value: Any, expiry_time: float, metadata: Optional[Dict] = None) -> None:
+    def store(self, key: str, value: Any, expiry_time: float, metadata: dict | None = None) -> None:
         """Store a cache entry.
 
         Args:
@@ -49,7 +49,7 @@ class CacheStorage:
         self._data[key] = entry
         logger.debug(f"Stored key {key}, expires at {expiry_time}")
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """Retrieve a cache entry.
 
         Args:
@@ -68,7 +68,7 @@ class CacheStorage:
 
         return entry.value
 
-    def get_entry(self, key: str) -> Optional[CacheEntry]:
+    def get_entry(self, key: str) -> CacheEntry | None:
         """Get full cache entry including metadata.
 
         Args:
@@ -145,7 +145,7 @@ class CacheStorage:
 
         return len(expired_keys)
 
-    def get_all_keys(self) -> Set[str]:
+    def get_all_keys(self) -> set[str]:
         """Get all keys in storage.
 
         Returns:

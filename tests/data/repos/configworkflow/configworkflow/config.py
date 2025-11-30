@@ -3,11 +3,11 @@
 This module loads configuration from multiple sources with precedence rules.
 """
 
-import os
 import json
-from typing import Any, Dict, Optional
-from pathlib import Path
 import logging
+import os
+from pathlib import Path
+from typing import Any
 
 from .plugins import PluginRegistry, default_logging_plugin, default_monitoring_plugin
 
@@ -17,14 +17,14 @@ logger = logging.getLogger(__name__)
 class Config:
     """Configuration manager with multi-source loading."""
 
-    def __init__(self, config_file: Optional[str] = None):
+    def __init__(self, config_file: str | None = None):
         """Initialize configuration.
 
         Args:
             config_file: Optional path to config file
         """
-        self._config: Dict[str, Any] = {}
-        self._defaults: Dict[str, Any] = {
+        self._config: dict[str, Any] = {}
+        self._defaults: dict[str, Any] = {
             'max_workers': 4,
             'timeout': 30,
             'retry_attempts': 3,
@@ -76,7 +76,7 @@ class Config:
             return
 
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path) as f:
                 file_config = json.load(f)
 
             self._config.update(file_config)

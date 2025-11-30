@@ -1,9 +1,9 @@
 """Event store for event sourcing."""
 
 import logging
-from typing import List, Optional, Any, Dict
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class Event:
     event_type: str
     aggregate_id: str
     sequence: int
-    data: Dict[str, Any]
+    data: dict[str, Any]
     timestamp: datetime = field(default_factory=datetime.utcnow)
 
 
@@ -24,11 +24,11 @@ class EventStore:
 
     def __init__(self):
         """Initialize event store."""
-        self._events: List[Event] = []
+        self._events: list[Event] = []
         self._sequence_counter = 0
         logger.info("Initialized event store")
 
-    def append(self, event_type: str, aggregate_id: str, data: Dict[str, Any]) -> Event:
+    def append(self, event_type: str, aggregate_id: str, data: dict[str, Any]) -> Event:
         """Append an event to the store."""
         self._sequence_counter += 1
 
@@ -44,11 +44,11 @@ class EventStore:
         logger.debug(f"Appended event {event.id}")
         return event
 
-    def get_events(self, aggregate_id: str) -> List[Event]:
+    def get_events(self, aggregate_id: str) -> list[Event]:
         """Get all events for an aggregate."""
         return [e for e in self._events if e.aggregate_id == aggregate_id]
 
-    def replay_from_snapshot(self, snapshot_id: str) -> List[Event]:
+    def replay_from_snapshot(self, snapshot_id: str) -> list[Event]:
         """Replay events from a snapshot.
 
         Re-emits events without tracking which were already processed.

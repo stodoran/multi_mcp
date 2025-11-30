@@ -1,13 +1,13 @@
 """PluginDataPipeline - Extensible data processing with hot-reload."""
+from .backpressure import BackpressureManager
+from .config_watcher import ConfigWatcher
+from .executor import Executor
+from .isolation import PluginIsolation
+from .metrics import MetricsCollector
 from .pipeline import Pipeline
 from .plugin_loader import PluginLoader
-from .executor import Executor
 from .resource_pool import ResourcePool
-from .backpressure import BackpressureManager
 from .stream import StreamProcessor
-from .metrics import MetricsCollector
-from .config_watcher import ConfigWatcher
-from .isolation import PluginIsolation
 
 __all__ = ["Pipeline", "PluginLoader", "Executor", "ResourcePool",
            "BackpressureManager", "StreamProcessor", "MetricsCollector",

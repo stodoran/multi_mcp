@@ -4,7 +4,7 @@ This module manages the task queue and task lifecycle.
 """
 
 import asyncio
-from typing import Callable, Optional, Any
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 
@@ -78,7 +78,7 @@ class TaskQueue:
             self._tasks[task_id] = task
             await self._queue.put(task)
 
-    async def get_task(self) -> Optional[Task]:
+    async def get_task(self) -> Task | None:
         """Get the next task from the queue.
 
         Returns:
@@ -90,7 +90,7 @@ class TaskQueue:
                 if task.task_id in self._tasks:
                     self._tasks[task.task_id].status = TaskStatus.RUNNING
             return task
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return None
 
     async def mark_completed(self, task_id: str, success: bool = True) -> None:
@@ -121,7 +121,7 @@ class TaskQueue:
             self._tasks[task_id].status = TaskStatus.CANCELLED
             del self._tasks[task_id]
 
-    def get_status(self, task_id: str) -> Optional[TaskStatus]:
+    def get_status(self, task_id: str) -> TaskStatus | None:
         """Get the status of a task.
 
         Args:

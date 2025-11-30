@@ -1,11 +1,11 @@
 """ServiceRegistry - Microservice discovery and caching layer."""
 
-from .registry import ServiceRegistry
-from .cache import Cache
-from .health import HealthChecker
-from .router import Router
-from .discovery import ServiceDiscovery
 from .auth import TokenManager
+from .cache import Cache
+from .discovery import ServiceDiscovery
+from .health import HealthChecker
+from .registry import ServiceRegistry
+from .router import Router
 
 __all__ = [
     'ServiceRegistry', 'Cache', 'HealthChecker',

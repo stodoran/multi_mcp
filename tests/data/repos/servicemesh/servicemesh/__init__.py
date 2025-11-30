@@ -4,16 +4,16 @@ ServiceMesh - Microservices service discovery and load balancing
 
 __version__ = "2.1.0"
 
-from .mesh import MeshClient
-from .discovery import ServiceDiscovery
-from .load_balancer import LoadBalancer
 from .circuit_breaker import CircuitBreaker
+from .discovery import ServiceDiscovery
+from .endpoints import EndpointManager
 from .health_checker import HealthChecker
-from .retry_policy import RetryPolicy
-from .tracing import DistributedTracing
+from .load_balancer import LoadBalancer
+from .mesh import MeshClient
 from .metrics import MetricsCollector
 from .registry import ServiceRegistry
-from .endpoints import EndpointManager
+from .retry_policy import RetryPolicy
+from .tracing import DistributedTracing
 
 __all__ = [
     "MeshClient",

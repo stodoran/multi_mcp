@@ -3,9 +3,9 @@
 This module provides caching to reduce lookups to the service registry.
 """
 
-import time
-from typing import Optional, Dict, Any
 import logging
+import time
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +14,11 @@ class Cache:
     """Cache for service metadata and discovery information."""
 
     def __init__(self):
-        self._cache: Dict[str, Any] = {}
-        self._timestamps: Dict[str, float] = {}
-        self._ttl: Dict[str, float] = {}
+        self._cache: dict[str, Any] = {}
+        self._timestamps: dict[str, float] = {}
+        self._ttl: dict[str, float] = {}
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """Get a value from the cache.
 
         Args:
@@ -72,7 +72,7 @@ class Cache:
         self._ttl.clear()
         logger.info("Cache cleared")
 
-    def get_stats(self) -> Dict[str, int]:
+    def get_stats(self) -> dict[str, int]:
         """Get cache statistics.
 
         Returns:

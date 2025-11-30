@@ -4,14 +4,13 @@ This module manages a pool of worker threads that execute tasks from the queue.
 """
 
 import asyncio
-import threading
 import logging
-from typing import Optional
-from concurrent.futures import ThreadPoolExecutor, Future
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 
-from .queue import TaskQueue, Task
 from .config import Config
+from .queue import Task, TaskQueue
 from .storage import ResultStorage
 
 logger = logging.getLogger(__name__)
@@ -30,7 +29,7 @@ class WorkerPool:
         self._storage = storage
         self._config = config
         self._running = False
-        self._executor: Optional[ThreadPoolExecutor] = None
+        self._executor: ThreadPoolExecutor | None = None
 
         if config.max_workers == 0:
             self._max_workers = None

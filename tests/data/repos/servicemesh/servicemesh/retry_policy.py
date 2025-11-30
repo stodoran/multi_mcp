@@ -3,11 +3,11 @@ Retry policy with exponential backoff
 Handles request retry logic with configurable strategies
 """
 
-import time
-import random
-import os
 import logging
-from typing import Optional, Callable
+import os
+import random
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ class RetryPolicy:
     BUG #2: No jitter, causing synchronized retries and thundering herd
     """
 
-    def __init__(self, config: Optional[RetryConfig] = None):
+    def __init__(self, config: RetryConfig | None = None):
         self.config = config or RetryConfig()
         self._attempt_count = 0
         self._last_attempt_time = 0

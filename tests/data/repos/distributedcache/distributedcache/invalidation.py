@@ -1,10 +1,11 @@
 """Cache invalidation manager with callback support."""
 
 import logging
-from typing import Dict, Set, Any, Callable
+from collections.abc import Callable
+
 from .node import CacheNode
-from .storage import CacheStorage
 from .protocol import CacheProtocol
+from .storage import CacheStorage
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class InvalidationManager:
         self.node = node
         self.storage = storage
         self.protocol = protocol
-        self._invalidation_callbacks: Dict[str, Set[Callable]] = {}
+        self._invalidation_callbacks: dict[str, set[Callable]] = {}
         self._register_storage_callbacks()
         logger.info(f"Initialized invalidation manager for node {node.node_id}")
 

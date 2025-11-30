@@ -3,18 +3,20 @@ Service mesh client
 Main entry point for service-to-service communication
 """
 
-import time
 import logging
-from typing import Optional, Callable, Dict, Any
-from .discovery import ServiceDiscovery
-from .load_balancer import LoadBalancer
+import time
+from collections.abc import Callable
+from typing import Any
+
 from .circuit_breaker import CircuitBreaker
-from .retry_policy import RetryPolicy, RetryConfig
+from .discovery import ServiceDiscovery
+from .endpoints import Endpoint, EndpointManager
 from .health_checker import HealthChecker
-from .tracing import DistributedTracing, Span
+from .load_balancer import LoadBalancer
 from .metrics import MetricsCollector
 from .registry import ServiceRegistry
-from .endpoints import EndpointManager, Endpoint
+from .retry_policy import RetryConfig, RetryPolicy
+from .tracing import DistributedTracing
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +43,7 @@ class MeshClient:
         self.health_checker = HealthChecker(self.endpoint_manager)
 
     def call_service(self, target_service: str, operation: str,
-                    func: Callable, *args, session_id: Optional[str] = None,
+                    func: Callable, *args, session_id: str | None = None,
                     **kwargs) -> Any:
         """
         Call another service through the mesh
@@ -102,7 +104,7 @@ class MeshClient:
         # BUG #2: Execute with retry (no jitter causes synchronized retries)
         return self.retry_policy.execute_with_retry(wrapped_call)
 
-    def register_service(self, host: str, port: int, metadata: Optional[Dict] = None):
+    def register_service(self, host: str, port: int, metadata: dict | None = None):
         """Register this service instance"""
         endpoint = Endpoint(
             host=host,
@@ -126,14 +128,14 @@ class MeshClient:
         # For now, just demonstrate the integration
         self.health_checker.check_all_endpoints(target_service)
 
-    def get_trace_context(self, span_id: int) -> Dict[str, str]:
+    def get_trace_context(self, span_id: int) -> dict[str, str]:
         """
         Get trace context headers for propagation
         BUG #5: Propagates trace context (span IDs may collide)
         """
         return self.tracing.inject_context(span_id)
 
-    def get_mesh_stats(self) -> Dict:
+    def get_mesh_stats(self) -> dict:
         """Get comprehensive mesh statistics"""
         return {
             'service_name': self.service_name,

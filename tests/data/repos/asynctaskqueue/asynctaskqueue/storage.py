@@ -3,17 +3,17 @@
 This module manages storage of task execution results and statistics.
 """
 
-from typing import Any, Dict, Optional
 from datetime import datetime
+from typing import Any
 
 
 class ResultStorage:
     """Storage for task results and execution statistics."""
 
     def __init__(self):
-        self._results: Dict[str, Any] = {}
-        self._retry_counts: Dict[str, int] = {}
-        self._timestamps: Dict[str, datetime] = {}
+        self._results: dict[str, Any] = {}
+        self._retry_counts: dict[str, int] = {}
+        self._timestamps: dict[str, datetime] = {}
 
     def store_result(self, task_id: str, result: Any) -> None:
         """Store the result of a completed task.
@@ -25,7 +25,7 @@ class ResultStorage:
         self._results[task_id] = result
         self._timestamps[task_id] = datetime.now()
 
-    def get_result(self, task_id: str) -> Optional[Any]:
+    def get_result(self, task_id: str) -> Any | None:
         """Retrieve a stored result.
 
         Args:
@@ -71,7 +71,7 @@ class ResultStorage:
         self._retry_counts.pop(task_id, None)
         self._timestamps.pop(task_id, None)
 
-    def get_all_results(self) -> Dict[str, Any]:
+    def get_all_results(self) -> dict[str, Any]:
         """Get all stored results.
 
         Returns:

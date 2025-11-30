@@ -3,12 +3,12 @@
 This module defines the base Stage class and concrete stage implementations.
 """
 
-from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
 import logging
+from abc import ABC, abstractmethod
+from typing import Any
 
-from .validators import Validator
 from .transforms import Transform
+from .validators import Validator
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class Stage(ABC):
         self._passed_count = 0
 
     @abstractmethod
-    def process(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def process(self, data: dict[str, Any]) -> dict[str, Any] | None:
         """Process a record through this stage."""
         pass
 
@@ -37,12 +37,12 @@ class Stage(ABC):
 class ValidatorStage(Stage):
     """Stage that validates records using validators."""
 
-    def __init__(self, name: str, validators: List[Validator]):
+    def __init__(self, name: str, validators: list[Validator]):
         super().__init__(name)
         self.validators = validators
         self._validation_failures = []
 
-    def process(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def process(self, data: dict[str, Any]) -> dict[str, Any] | None:
         """Validate data through all validators."""
         result = data
         for validator in self.validators:
@@ -64,12 +64,12 @@ class ValidatorStage(Stage):
 class TransformStage(Stage):
     """Stage that transforms records."""
 
-    def __init__(self, name: str, transforms: List[Transform]):
+    def __init__(self, name: str, transforms: list[Transform]):
         super().__init__(name)
         self.transforms = transforms
         self._transformed_records = []
 
-    def process(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def process(self, data: dict[str, Any]) -> dict[str, Any] | None:
         """Transform data through all transforms."""
         if data is None:
             logger.error("Received None data in transform stage")
@@ -98,7 +98,7 @@ class LoaderStage(Stage):
         self.storage_path = storage_path
         self._loaded_records = []
 
-    def process(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def process(self, data: dict[str, Any]) -> dict[str, Any] | None:
         """Load/persist data to storage."""
         if data is None:
             logger.error("Received None data in loader stage")

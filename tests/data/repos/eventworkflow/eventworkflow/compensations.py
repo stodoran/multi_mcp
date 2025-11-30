@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import List, Callable, Any
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
@@ -14,10 +14,10 @@ class CompensationManager:
     def __init__(self, max_workers: int = 10):
         """Initialize compensation manager."""
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
-        self._pending_compensations: List[Callable] = []
+        self._pending_compensations: list[Callable] = []
         logger.info(f"Initialized compensation manager with {max_workers} workers")
 
-    async def execute_compensations(self, compensations: List[Callable]) -> None:
+    async def execute_compensations(self, compensations: list[Callable]) -> None:
         """Execute compensations in reverse order."""
         for compensation in reversed(compensations):
             try:

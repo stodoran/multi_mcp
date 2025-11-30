@@ -1,8 +1,8 @@
 """Plugin loading and hot-reload."""
-import sys
-import logging
 import importlib
-from typing import Dict, Any
+import logging
+import sys
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +10,7 @@ class PluginLoader:
     """Loads and manages plugins."""
 
     def __init__(self):
-        self._plugins: Dict[str, Any] = {}
+        self._plugins: dict[str, Any] = {}
         logger.info("Initialized plugin loader")
 
     def load_plugin(self, name: str, module_path: str) -> Any:

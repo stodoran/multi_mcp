@@ -3,7 +3,6 @@
 This module provides error handlers for pipeline failures.
 """
 
-from typing import List, Optional
 import logging
 
 from .stages import Stage
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 class ErrorHandler:
     """Base error handler for pipeline failures."""
 
-    def __init__(self, stages: List[Stage]):
+    def __init__(self, stages: list[Stage]):
         """Initialize with list of pipeline stages.
 
         Args:
@@ -27,7 +26,7 @@ class ErrorHandler:
         self,
         error: Exception,
         stage_name: str,
-        record_id: Optional[str] = None
+        record_id: str | None = None
     ) -> bool:
         """Handle a pipeline error.
 
@@ -57,7 +56,7 @@ class RollbackHandler(ErrorHandler):
         self,
         error: Exception,
         stage_name: str,
-        record_id: Optional[str] = None
+        record_id: str | None = None
     ) -> bool:
         """Handle error by attempting rollback of all stages."""
         super().handle_error(error, stage_name, record_id)
@@ -89,7 +88,7 @@ class RollbackHandler(ErrorHandler):
 class RetryHandler(ErrorHandler):
     """Error handler that retries failed records."""
 
-    def __init__(self, stages: List[Stage], max_retries: int = 3):
+    def __init__(self, stages: list[Stage], max_retries: int = 3):
         super().__init__(stages)
         self.max_retries = max_retries
         self._retry_counts: dict[str, int] = {}
@@ -98,7 +97,7 @@ class RetryHandler(ErrorHandler):
         self,
         error: Exception,
         stage_name: str,
-        record_id: Optional[str] = None
+        record_id: str | None = None
     ) -> bool:
         """Handle error by retrying up to max_retries times."""
         super().handle_error(error, stage_name, record_id)

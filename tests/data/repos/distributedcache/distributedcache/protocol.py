@@ -1,7 +1,8 @@
 """Communication protocol for inter-node messaging."""
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
+
 from .node import CacheNode
 from .storage import CacheEntry
 
@@ -22,7 +23,7 @@ class CacheProtocol:
             local_node: Local cache node
         """
         self.local_node = local_node
-        self._message_handlers: Dict[str, Any] = {}
+        self._message_handlers: dict[str, Any] = {}
         logger.info(f"Initialized protocol for node {local_node.node_id}")
 
     def send_replicate(
@@ -31,7 +32,7 @@ class CacheProtocol:
         key: str,
         value: Any,
         expiry_time: float,
-        metadata: Optional[Dict] = None
+        metadata: dict | None = None
     ) -> bool:
         """Send replication command to target node.
 
@@ -109,7 +110,7 @@ class CacheProtocol:
             logger.error(f"Failed to send invalidate to {target.node_id}: {e}")
             return False
 
-    def request_key(self, target: CacheNode, key: str) -> Optional[CacheEntry]:
+    def request_key(self, target: CacheNode, key: str) -> CacheEntry | None:
         """Request a key from target node.
 
         Args:
@@ -163,7 +164,7 @@ class CacheProtocol:
         self._message_handlers[message_type] = handler
         logger.debug(f"Registered handler for {message_type}")
 
-    def handle_message(self, message: Dict[str, Any]) -> Any:
+    def handle_message(self, message: dict[str, Any]) -> Any:
         """Handle incoming message.
 
         Args:

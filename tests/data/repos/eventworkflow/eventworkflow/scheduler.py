@@ -1,10 +1,10 @@
 """Scheduler for long-running workflows."""
 
 import asyncio
-import time
 import logging
-from typing import Dict, Any, Optional, Callable
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class WorkflowScheduler:
     def __init__(self, max_workers: int = 10):
         """Initialize scheduler."""
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
-        self._scheduled_tasks: Dict[str, Any] = []
+        self._scheduled_tasks: dict[str, Any] = []
         logger.info(f"Initialized scheduler with {max_workers} workers")
 
     async def schedule_delayed(self, task: Callable, delay: float) -> str:

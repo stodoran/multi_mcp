@@ -3,12 +3,12 @@
 This module orchestrates the execution of records through pipeline stages.
 """
 
-from typing import List, Dict, Any, Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any
 
-from .stages import Stage
 from .handlers import ErrorHandler
+from .stages import Stage
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +18,8 @@ class Pipeline:
 
     def __init__(
         self,
-        stages: List[Stage],
-        error_handler: Optional[ErrorHandler] = None,
+        stages: list[Stage],
+        error_handler: ErrorHandler | None = None,
         parallel: bool = False
     ):
         """Initialize pipeline with stages.
@@ -34,7 +34,7 @@ class Pipeline:
         self.parallel = parallel
         self._processed_count = 0
 
-    def process_record(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def process_record(self, data: dict[str, Any]) -> dict[str, Any] | None:
         """Process a single record through all stages.
 
         Args:
@@ -75,7 +75,7 @@ class Pipeline:
 
         return result
 
-    def process_batch(self, records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def process_batch(self, records: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Process a batch of records.
 
         Args:
@@ -116,7 +116,7 @@ class Pipeline:
         """Get total count of records processed."""
         return self._processed_count
 
-    def get_stage_metrics(self) -> Dict[str, int]:
+    def get_stage_metrics(self) -> dict[str, int]:
         """Get metrics from all stages."""
         return {
             stage.name: stage.get_passed_count()

@@ -3,10 +3,10 @@
 This module manages workflow state transitions and validation.
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, Any, Optional
-from enum import Enum
 import logging
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class WorkflowState:
     current_state: StateTransition = StateTransition.PENDING
     current_step: int = 0
     total_steps: int = 0
-    metadata: Dict[str, Any] = field(default={})
+    metadata: dict[str, Any] = field(default={})
 
     def __post_init__(self):
         """Validate initial state."""
@@ -91,4 +91,4 @@ _shared_dict = {}
 class WorkflowStateBuggy:
     """Alternative version that makes the bug more obvious."""
     workflow_id: str
-    metadata: Dict[str, Any] = _shared_dict
+    metadata: dict[str, Any] = _shared_dict

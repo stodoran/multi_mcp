@@ -4,16 +4,16 @@ This module defines data structures for records flowing through the pipeline.
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
 from decimal import Decimal
+from typing import Any
 
 
 @dataclass
 class Record:
     """Base record class for pipeline data."""
     record_id: str
-    data: Dict[str, Any] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    data: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get a value from the record data."""

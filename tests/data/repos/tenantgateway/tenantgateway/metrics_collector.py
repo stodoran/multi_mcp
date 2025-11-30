@@ -1,6 +1,5 @@
 """Metrics collection for gateway."""
 import logging
-from typing import Dict, Tuple, Any
 
 logger = logging.getLogger(__name__)
 
@@ -8,7 +7,7 @@ class GatewayMetrics:
     """Collects gateway metrics."""
 
     def __init__(self):
-        self._metrics: Dict[Tuple, int] = {}
+        self._metrics: dict[tuple, int] = {}
         logger.info("Initialized gateway metrics")
 
     def record_request(self, tenant_id: str, endpoint: str, method: str, request_id: str = None, status: int = 200) -> None:

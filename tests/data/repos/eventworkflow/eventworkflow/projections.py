@@ -1,9 +1,8 @@
 """Projections for read models (CQRS)."""
 
-import asyncio
-import logging
 import contextvars
-from typing import Dict, Any, List
+import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +17,7 @@ class Projection:
         self.name = name
         self.count = 0
         self.last_event_id = None
-        self._data: Dict[str, Any] = {}
+        self._data: dict[str, Any] = {}
         logger.info(f"Created projection {name}")
 
     async def handle_event(self, event: Any) -> None:
@@ -42,7 +41,7 @@ class ProjectionManager:
 
     def __init__(self):
         """Initialize projection manager."""
-        self._projections: List[Projection] = []
+        self._projections: list[Projection] = []
         logger.info("Initialized projection manager")
 
     def register_projection(self, projection: Projection) -> None:

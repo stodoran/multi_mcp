@@ -4,7 +4,8 @@ Validates feature schemas and data quality
 """
 
 import logging
-from typing import Dict, List, Any
+from typing import Any
+
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ class Validator:
             'timestamp': float,
         }
 
-    def validate_features(self, features: Dict) -> bool:
+    def validate_features(self, features: dict) -> bool:
         """
         Validate feature dictionary
         DECOY: Only validates schema (column names, types), not computation logic
@@ -49,8 +50,8 @@ class Validator:
 
         return True
 
-    def validate_temporal_consistency(self, features: List[Dict], labels: List[Any],
-                                     timestamps: List[float]) -> bool:
+    def validate_temporal_consistency(self, features: list[dict], labels: list[Any],
+                                     timestamps: list[float]) -> bool:
         """
         Validate temporal consistency
         DECOY: Checks feature timestamp ≤ label timestamp,
@@ -94,7 +95,7 @@ class Validator:
 
         return True
 
-    def validate_no_data_leakage(self, features: Dict, event_timestamp: float) -> bool:
+    def validate_no_data_leakage(self, features: dict, event_timestamp: float) -> bool:
         """
         Validate no data leakage
         DECOY: Only checks timestamp, not feature computation
@@ -109,7 +110,7 @@ class Validator:
 
         return True
 
-    def check_data_quality(self, df: pd.DataFrame) -> Dict:
+    def check_data_quality(self, df: pd.DataFrame) -> dict:
         """Check data quality metrics"""
         return {
             'num_rows': len(df),

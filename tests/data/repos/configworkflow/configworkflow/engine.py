@@ -3,15 +3,15 @@
 This module orchestrates workflow execution with state management.
 """
 
+import logging
 import multiprocessing
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-import logging
+from typing import Any
 
 from .config import Config
-from .state import WorkflowState, StateTransition
-from .steps import Step, create_step
 from .serializer import StateSerializer
+from .state import StateTransition, WorkflowState
+from .steps import Step
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +21,8 @@ class WorkflowEngine:
 
     def __init__(
         self,
-        config: Optional[Config] = None,
-        serializer: Optional[StateSerializer] = None
+        config: Config | None = None,
+        serializer: StateSerializer | None = None
     ):
         """Initialize workflow engine.
 
@@ -32,7 +32,7 @@ class WorkflowEngine:
         """
         self._config = config or Config()
         self._serializer = serializer or StateSerializer()
-        self._workflows: Dict[str, WorkflowState] = {}
+        self._workflows: dict[str, WorkflowState] = {}
 
         config_file = self._config.get('_config_file_path', '')
         if config_file:
@@ -49,8 +49,8 @@ class WorkflowEngine:
     def create_workflow(
         self,
         workflow_id: str,
-        steps: List[Step],
-        scheduled_time: Optional[str] = None
+        steps: list[Step],
+        scheduled_time: str | None = None
     ) -> WorkflowState:
         """Create a new workflow.
 
@@ -85,7 +85,7 @@ class WorkflowEngine:
     def execute_workflow(
         self,
         workflow_id: str,
-        steps: List[Step],
+        steps: list[Step],
         use_cache: bool = True
     ) -> bool:
         """Execute a workflow.
@@ -140,14 +140,14 @@ class WorkflowEngine:
         """
         return step.execute()
 
-    def _get_cached_results(self) -> Dict[str, Any]:
+    def _get_cached_results(self) -> dict[str, Any]:
         """Get cached workflow results.
 
         This is a stub that would check actual cache.
         """
         return {}
 
-    def get_workflow_state(self, workflow_id: str) -> Optional[WorkflowState]:
+    def get_workflow_state(self, workflow_id: str) -> WorkflowState | None:
         """Get workflow state.
 
         Args:
@@ -158,7 +158,7 @@ class WorkflowEngine:
         """
         return self._workflows.get(workflow_id)
 
-    def load_workflow(self, workflow_id: str) -> Optional[WorkflowState]:
+    def load_workflow(self, workflow_id: str) -> WorkflowState | None:
         """Load workflow state from disk.
 
         Args:

@@ -3,9 +3,9 @@ Service registry with distributed state management
 Handles service registration and state synchronization
 """
 
-import time
 import logging
-from typing import Dict, List, Optional, Set
+import time
+
 from .endpoints import Endpoint
 
 logger = logging.getLogger(__name__)
@@ -20,9 +20,9 @@ class ServiceRegistry:
         self.node_id = node_id
         self.enable_distributed = enable_distributed
         # Local state: service_name -> {endpoint_key -> (endpoint, timestamp)}
-        self._local_state: Dict[str, Dict[str, tuple]] = {}
+        self._local_state: dict[str, dict[str, tuple]] = {}
         # Remote registries for distributed mode
-        self._remote_registries: List['ServiceRegistry'] = []
+        self._remote_registries: list[ServiceRegistry] = []
         self._sync_interval = 5.0  # 5 seconds
 
     def register_service(self, service_name: str, endpoint: Endpoint):
@@ -44,7 +44,7 @@ class ServiceRegistry:
             if endpoint_key in self._local_state[service_name]:
                 del self._local_state[service_name][endpoint_key]
 
-    def get_endpoints(self, service_name: str) -> List[Endpoint]:
+    def get_endpoints(self, service_name: str) -> list[Endpoint]:
         """Get all endpoints for a service"""
         if not self.enable_distributed:
             return self._get_local_endpoints(service_name)
@@ -53,13 +53,13 @@ class ServiceRegistry:
         merged_state = self._merge_distributed_state(service_name)
         return [endpoint for endpoint, _ in merged_state.values()]
 
-    def _get_local_endpoints(self, service_name: str) -> List[Endpoint]:
+    def _get_local_endpoints(self, service_name: str) -> list[Endpoint]:
         """Get endpoints from local state only"""
         if service_name not in self._local_state:
             return []
         return [endpoint for endpoint, _ in self._local_state[service_name].values()]
 
-    def _merge_distributed_state(self, service_name: str) -> Dict[str, tuple]:
+    def _merge_distributed_state(self, service_name: str) -> dict[str, tuple]:
         """
         Merge local and remote registry states
         BUG #1: Uses last-write-wins with wall-clock timestamps
@@ -86,7 +86,7 @@ class ServiceRegistry:
 
         return merged
 
-    def _get_local_state(self, service_name: str) -> Dict[str, tuple]:
+    def _get_local_state(self, service_name: str) -> dict[str, tuple]:
         """Get local state for distributed sync"""
         return self._local_state.get(service_name, {})
 
@@ -106,7 +106,7 @@ class ServiceRegistry:
                 remote_state = remote._get_local_state(service_name)
                 self._merge_remote_state(service_name, remote_state)
 
-    def _merge_remote_state(self, service_name: str, remote_state: Dict[str, tuple]):
+    def _merge_remote_state(self, service_name: str, remote_state: dict[str, tuple]):
         """Merge remote state into local state"""
         if service_name not in self._local_state:
             self._local_state[service_name] = {}

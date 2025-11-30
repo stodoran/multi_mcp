@@ -4,8 +4,8 @@ Compares training and production feature distributions
 """
 
 import logging
+
 import numpy as np
-from typing import List, Dict, Optional, Tuple
 from scipy import stats
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class DriftDetector:
         self._detailed_metrics_enabled = False
 
     def detect_drift(self, train_dist: np.ndarray, prod_dist: np.ndarray,
-                    feature_name: str = "feature") -> Dict:
+                    feature_name: str = "feature") -> dict:
         """
         Detect drift using KS test on binned histograms
         BUG #5: Binning masks subtle mean shifts
@@ -75,7 +75,7 @@ class DriftDetector:
         # Return histogram counts (normalized)
         return hist / hist.sum() if hist.sum() > 0 else hist
 
-    def detect_drift_raw(self, train_dist: np.ndarray, prod_dist: np.ndarray) -> Dict:
+    def detect_drift_raw(self, train_dist: np.ndarray, prod_dist: np.ndarray) -> dict:
         """
         Detect drift on raw data (not binned)
         This would correctly detect subtle shifts, but isn't used
@@ -88,7 +88,7 @@ class DriftDetector:
             'is_drifting': pvalue < self.alert_threshold,
         }
 
-    def compare_distributions(self, train_dist: np.ndarray, prod_dist: np.ndarray) -> Dict:
+    def compare_distributions(self, train_dist: np.ndarray, prod_dist: np.ndarray) -> dict:
         """
         Compare distributions with multiple metrics
         """

@@ -1,7 +1,9 @@
-from typing import Any, Dict, Tuple
+from typing import Any
+
 from .service import ServiceError, process_item
 
-async def create_item(request_body: Dict[str, Any]) -> Tuple[int, Dict[str, Any]]:
+
+async def create_item(request_body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
     try:
         item = await process_item(request_body)
         response_body = {

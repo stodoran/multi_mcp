@@ -3,10 +3,10 @@ Feature store for managing feature computation and caching
 Handles both offline (batch) and online (streaming) feature generation
 """
 
-import time
 import logging
-from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
+import time
+from typing import Any
+
 from .preprocessor import Preprocessor
 
 logger = logging.getLogger(__name__)
@@ -20,16 +20,16 @@ class FeatureCache:
 
     def __init__(self, ttl: int = 3600):
         self.ttl = ttl  # BUG #3: 1 hour TTL, but training uses 6 hour window
-        self._cache: Dict[str, tuple] = {}  # key -> (value, timestamp)
+        self._cache: dict[str, tuple] = {}  # key -> (value, timestamp)
 
-    def set(self, key: str, value: Any, ttl: Optional[int] = None):
+    def set(self, key: str, value: Any, ttl: int | None = None):
         """Set cache entry with TTL"""
         if ttl is None:
             ttl = self.ttl
         timestamp = time.time()
         self._cache[key] = (value, timestamp, ttl)
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """Get cache entry if not expired"""
         if key not in self._cache:
             return None
@@ -60,7 +60,7 @@ class FeatureStore:
         self._cache = FeatureCache(ttl=3600)  # 1 hour cache
         self._database = {}  # Simulated database
 
-    def get_training_features(self, user_id: int, event_timestamp: float) -> Dict:
+    def get_training_features(self, user_id: int, event_timestamp: float) -> dict:
         """
         Get features for training
         BUG #1: Uses Pandas path (pd.cut)
@@ -94,7 +94,7 @@ class FeatureStore:
 
         return features
 
-    def get_serving_features(self, user_id: int, request_time: Optional[float] = None) -> Dict:
+    def get_serving_features(self, user_id: int, request_time: float | None = None) -> dict:
         """
         Get features for serving
         BUG #1: Uses bisect path (left-inclusive)
@@ -175,7 +175,7 @@ class FeatureStore:
         # Simulate lookup
         return 35 + (user_id % 20)  # Ages between 35-54
 
-    def warm_cache(self, user_ids: List[int]):
+    def warm_cache(self, user_ids: list[int]):
         """
         Warm cache with features for active users
         BUG #3: Cache warmed with 1-hour TTL, but training uses 6-hour window
@@ -188,14 +188,14 @@ class FeatureStore:
             # Features cached with TTL=3600 (1 hour)
             # BUG #3: After 1 hour, cache expires but isn't refreshed until cache miss
 
-    def get_batch_features(self, user_ids: List[int], event_timestamps: List[float]) -> List[Dict]:
+    def get_batch_features(self, user_ids: list[int], event_timestamps: list[float]) -> list[dict]:
         """Get features for batch of users (used in training)"""
         return [
             self.get_training_features(uid, ts)
             for uid, ts in zip(user_ids, event_timestamps)
         ]
 
-    def get_cache_stats(self) -> Dict:
+    def get_cache_stats(self) -> dict:
         """Get cache statistics"""
         return {
             'cache_size': len(self._cache._cache),

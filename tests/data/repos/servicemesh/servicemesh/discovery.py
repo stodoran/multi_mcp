@@ -3,9 +3,9 @@ Service discovery client
 Queries service registry and caches endpoint lists
 """
 
-import time
 import logging
-from typing import List, Optional, Dict
+import time
+
 from .endpoints import Endpoint
 from .registry import ServiceRegistry
 
@@ -20,10 +20,10 @@ class ServiceDiscovery:
     def __init__(self, registry: ServiceRegistry, cache_ttl: int = 30):
         self.registry = registry
         self.cache_ttl = cache_ttl
-        self._cache: Dict[str, tuple] = {}  # service_name -> (endpoints, timestamp)
+        self._cache: dict[str, tuple] = {}  # service_name -> (endpoints, timestamp)
         self._query_count = 0
 
-    def get_services(self, service_name: str, use_cache: bool = True) -> List[Endpoint]:
+    def get_services(self, service_name: str, use_cache: bool = True) -> list[Endpoint]:
         """
         Query registry for service endpoints
         BUG #1: Part of split-brain chain - gets divergent endpoint lists
@@ -45,7 +45,7 @@ class ServiceDiscovery:
         logger.info(f"Discovered {len(endpoints)} endpoints for {service_name}")
         return endpoints
 
-    def _get_from_cache(self, service_name: str) -> Optional[List[Endpoint]]:
+    def _get_from_cache(self, service_name: str) -> list[Endpoint] | None:
         """Get endpoints from cache if not expired"""
         if service_name not in self._cache:
             return None
@@ -86,14 +86,14 @@ class ServiceDiscovery:
         # In reality, would need change detection
         pass
 
-    def get_cache_stats(self) -> Dict:
+    def get_cache_stats(self) -> dict:
         """Get cache statistics"""
         return {
             'cached_services': len(self._cache),
             'total_queries': self._query_count,
         }
 
-    def invalidate_cache(self, service_name: Optional[str] = None):
+    def invalidate_cache(self, service_name: str | None = None):
         """Invalidate cache for specific service or all services"""
         if service_name:
             if service_name in self._cache:

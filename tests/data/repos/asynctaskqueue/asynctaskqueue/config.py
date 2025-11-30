@@ -4,7 +4,6 @@ This module loads and manages configuration settings for the task queue system.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass

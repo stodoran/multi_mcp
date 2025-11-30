@@ -1,8 +1,8 @@
 from pathlib import Path
-from typing import Dict, Optional
+
 from .config import get_settings
 
-_last_item_cache: Dict[str, dict] = {}
+_last_item_cache: dict[str, dict] = {}
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / get_settings().storage_dir_name
@@ -14,7 +14,7 @@ def save_item_dict(item_dict: dict, filename: str) -> Path:
     path.write_text(text, encoding="utf-8")
     return path
 
-def load_item_dict(filename: str) -> Optional[dict]:
+def load_item_dict(filename: str) -> dict | None:
     path = DATA_DIR / filename
     if not path.exists():
         return None
@@ -29,5 +29,5 @@ def load_item_dict(filename: str) -> Optional[dict]:
 def set_last_item(item_id: str, item_dict: dict) -> None:
     _last_item_cache[item_id] = item_dict
 
-def get_last_item(item_id: str) -> Optional[dict]:
+def get_last_item(item_id: str) -> dict | None:
     return _last_item_cache.get(item_id)

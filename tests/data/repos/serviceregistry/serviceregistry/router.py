@@ -4,11 +4,11 @@ This module routes requests to healthy service instances.
 """
 
 import asyncio
-from typing import Dict, Optional, Any, List
 import logging
+from typing import Any
 
-from .registry import ServiceRegistry
 from .health import HealthChecker
+from .registry import ServiceRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +29,14 @@ class Router:
         """
         self._registry = registry
         self._health_checker = health_checker
-        self._instance_cache: Dict[str, List[Dict[str, Any]]] = {}
+        self._instance_cache: dict[str, list[dict[str, Any]]] = {}
         self._cache_initialized = False
 
     async def route_request(
         self,
         service_type: str,
         request_data: Any
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Route a request to an available service instance.
 
         Args:
@@ -79,9 +79,9 @@ class Router:
 
     async def _forward_request(
         self,
-        instance: Dict[str, Any],
+        instance: dict[str, Any],
         request_data: Any
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Forward request to service instance.
 
         This is a stub that would make actual HTTP request.
@@ -98,7 +98,7 @@ class Router:
         self._instance_cache.clear()
         logger.info("Cleared instance cache")
 
-    def get_cached_instances(self, service_type: str) -> List[Dict[str, Any]]:
+    def get_cached_instances(self, service_type: str) -> list[dict[str, Any]]:
         """Get cached instances for a service type.
 
         Args:

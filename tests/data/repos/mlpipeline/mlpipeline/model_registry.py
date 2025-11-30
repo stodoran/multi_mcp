@@ -3,10 +3,10 @@ Model registry for version management
 Handles model storage in S3 and metadata in database
 """
 
-import time
 import logging
-from typing import Dict, Optional, Any
+import time
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,15 +18,15 @@ class ModelMetadata:
     version: int
     s3_path: str
     created_at: float
-    metrics: Dict
+    metrics: dict
 
 
 class S3Client:
     """Simulated S3 client"""
 
     def __init__(self):
-        self._storage: Dict[str, Any] = {}
-        self._upload_tasks: Dict[str, Any] = {}
+        self._storage: dict[str, Any] = {}
+        self._upload_tasks: dict[str, Any] = {}
 
     def upload_async(self, path: str, data: Any) -> str:
         """
@@ -60,7 +60,7 @@ class S3Client:
 
         return False
 
-    def download(self, path: str) -> Optional[Any]:
+    def download(self, path: str) -> Any | None:
         """Download from S3"""
         if path in self._storage:
             return self._storage[path]
@@ -78,7 +78,7 @@ class Database:
     """Simulated database"""
 
     def __init__(self):
-        self._models: Dict[str, ModelMetadata] = {}
+        self._models: dict[str, ModelMetadata] = {}
 
     def update_version(self, model_id: str, version: int, s3_path: str):
         """
@@ -95,7 +95,7 @@ class Database:
         self._models[model_id] = metadata
         logger.info(f"Updated database: model={model_id}, version={version}")
 
-    def get_current_version(self, model_id: str) -> Optional[ModelMetadata]:
+    def get_current_version(self, model_id: str) -> ModelMetadata | None:
         """Get current model version"""
         return self._models.get(model_id)
 
@@ -151,7 +151,7 @@ class ModelRegistry:
 
         return True
 
-    def get_model(self, model_id: str, version: Optional[int] = None) -> Optional[Any]:
+    def get_model(self, model_id: str, version: int | None = None) -> Any | None:
         """
         Get model by ID and version
         BUG #4: May fail if database has version but S3 upload incomplete
@@ -179,11 +179,11 @@ class ModelRegistry:
 
         return model_data
 
-    def get_current_version_number(self, model_id: str) -> Optional[int]:
+    def get_current_version_number(self, model_id: str) -> int | None:
         """Get current version number from database"""
         metadata = self.db.get_current_version(model_id)
         return metadata.version if metadata else None
 
-    def get_model_metadata(self, model_id: str) -> Optional[ModelMetadata]:
+    def get_model_metadata(self, model_id: str) -> ModelMetadata | None:
         """Get model metadata"""
         return self.db.get_current_version(model_id)

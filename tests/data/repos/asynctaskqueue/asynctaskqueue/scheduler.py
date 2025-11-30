@@ -4,9 +4,9 @@ This module provides scheduling capabilities for recurring and one-time delayed 
 """
 
 import threading
-from typing import Callable, Optional, Dict
 import time
 import uuid
+from collections.abc import Callable
 
 from .queue import TaskQueue
 
@@ -27,7 +27,7 @@ class ScheduledJob:
         self.interval = interval
         self.args = args
         self.kwargs = kwargs or {}
-        self.timer: Optional[threading.Timer] = None
+        self.timer: threading.Timer | None = None
         self.paused = False
 
 
@@ -36,7 +36,7 @@ class Scheduler:
 
     def __init__(self, queue: TaskQueue):
         self._queue = queue
-        self._jobs: Dict[str, ScheduledJob] = {}
+        self._jobs: dict[str, ScheduledJob] = {}
         self._lock = threading.Lock()
 
     def schedule_periodic(
@@ -156,7 +156,7 @@ class Scheduler:
 
             return True
 
-    def get_all_jobs(self) -> Dict[str, ScheduledJob]:
+    def get_all_jobs(self) -> dict[str, ScheduledJob]:
         """Get all scheduled jobs."""
         with self._lock:
             return dict(self._jobs)

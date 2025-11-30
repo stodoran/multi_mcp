@@ -1,14 +1,15 @@
 """Consistency checker for distributed cache coherence."""
 
-import time
 import logging
 import threading
-from typing import Optional, List, Dict, Any
+import time
 from enum import Enum
-from .node import CacheNode
-from .storage import CacheStorage
+from typing import Any
+
 from .hash_ring import ConsistentHashRing
+from .node import CacheNode
 from .replication import ReplicationManager
+from .storage import CacheStorage
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ class ConsistencyChecker:
         self.hash_ring = hash_ring
         self.replication_manager = replication_manager
         self.default_level = default_level
-        self._check_thread: Optional[threading.Thread] = None
+        self._check_thread: threading.Thread | None = None
         self._running = False
         self._last_check_time = time.monotonic()
         logger.info(f"Initialized consistency checker with level {default_level.value}")
@@ -73,7 +74,7 @@ class ConsistencyChecker:
         key: str,
         value: Any,
         expiry_time: float,
-        level: Optional[ConsistencyLevel] = None
+        level: ConsistencyLevel | None = None
     ) -> bool:
         """Write a value with specified consistency level.
 
@@ -112,8 +113,8 @@ class ConsistencyChecker:
     def read_with_consistency(
         self,
         key: str,
-        level: Optional[ConsistencyLevel] = None
-    ) -> Optional[Any]:
+        level: ConsistencyLevel | None = None
+    ) -> Any | None:
         """Read a value with specified consistency level.
 
         Args:
@@ -135,7 +136,7 @@ class ConsistencyChecker:
 
         return local_value
 
-    def check_consistency(self, key: str) -> Dict[str, Any]:
+    def check_consistency(self, key: str) -> dict[str, Any]:
         """Check consistency of a key across replicas.
 
         Uses monotonic time for consistency intervals, but wall-clock
