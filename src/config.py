@@ -4,10 +4,14 @@ Loads from environment variables and .env file.
 """
 
 import json
+import os
 from typing import Any
 
+from dotenv import load_dotenv
 from pydantic import Field, model_validator
-from pydantic_settings import BaseSettings, DotEnvSettingsSource, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
+from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
+
+load_dotenv()
 
 
 class CustomEnvSettingsSource(EnvSettingsSource):
@@ -20,21 +24,10 @@ class CustomEnvSettingsSource(EnvSettingsSource):
         return super().prepare_field_value(field_name, field, value, value_is_complex)
 
 
-class CustomDotEnvSettingsSource(DotEnvSettingsSource):
-    """Custom .env file settings source that handles comma-separated lists."""
-
-    def prepare_field_value(self, field_name: str, field: Any, value: Any, value_is_complex: bool) -> Any:
-        """Override to handle DEFAULT_MODEL_LIST as comma-separated."""
-        if field_name == "default_model_list" and isinstance(value, str):
-            return value
-        return super().prepare_field_value(field_name, field, value, value_is_complex)
-
-
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -45,6 +38,11 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
     gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")
     openrouter_api_key: str | None = Field(default=None, alias="OPENROUTER_API_KEY")
+
+    # Azure OpenAI (optional - LiteLLM picks these up from os.environ)
+    azure_openai_api_key: str | None = Field(default=None, alias="AZURE_OPENAI_API_KEY")
+    azure_openai_endpoint: str | None = Field(default=None, alias="AZURE_OPENAI_ENDPOINT")
+    azure_openai_api_version: str | None = Field(default=None, alias="AZURE_OPENAI_API_VERSION")
 
     # Model defaults
     default_model: str = Field(default="gpt-5-mini", alias="DEFAULT_MODEL")
@@ -64,12 +62,11 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        """Customize settings sources to use our custom sources."""
-        # Replace the default sources with our custom ones that handle comma-separated lists
+        """Customize settings sources to use our custom sources.
+        """
         return (
             init_settings,
-            CustomEnvSettingsSource(settings_cls),
-            CustomDotEnvSettingsSource(settings_cls, env_file=".env", env_file_encoding="utf-8"),
+            CustomEnvSettingsSource(settings_cls),  # Reads from os.environ (populated by load_dotenv)
             file_secret_settings,
         )
 

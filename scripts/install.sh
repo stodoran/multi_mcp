@@ -25,6 +25,16 @@ readonly ENV_FILE=".env"
 readonly ENV_EXAMPLE=".env.example"
 readonly REQUIRED_PYTHON_VERSION="3.13"
 
+readonly API_KEYS=(
+    "OPENAI_API_KEY"
+    "ANTHROPIC_API_KEY"
+    "GEMINI_API_KEY"
+    "OPENROUTER_API_KEY"
+    "AZURE_OPENAI_API_KEY"
+    "AZURE_OPENAI_ENDPOINT"
+    "AZURE_OPENAI_API_VERSION"
+)
+
 # ----------------------------------------------------------------------------
 # Utility Functions
 # ----------------------------------------------------------------------------
@@ -149,13 +159,100 @@ setup_env_file() {
     cp "$ENV_EXAMPLE" "$ENV_FILE"
     print_success "Created $ENV_FILE from template"
 
+    sync_env_keys "$ENV_FILE"
+
     echo "" >&2
-    print_warning "IMPORTANT: You must add your API keys to $ENV_FILE"
-    print_info "Edit $ENV_FILE and add at least one API key:"
+    print_warning "IMPORTANT: Verify API keys in $ENV_FILE"
+    print_info "At least one API key is required. Add any missing keys:"
     echo "  - OPENAI_API_KEY=sk-..." >&2
     echo "  - ANTHROPIC_API_KEY=sk-ant-..." >&2
     echo "  - GEMINI_API_KEY=..." >&2
     echo "" >&2
+}
+
+get_env_value() {
+    # Returns the effective value for a canonical env key, including Azure fallbacks
+    local key="$1"
+    local val="${!key:-}"
+
+    # Special case: Use AZURE_ENDPOINT value if AZURE_OPENAI_ENDPOINT not set
+    if [[ "$key" == "AZURE_OPENAI_ENDPOINT" ]] && [[ -z "$val" ]] && [[ -n "${AZURE_ENDPOINT:-}" ]]; then
+        val="${AZURE_ENDPOINT}"
+    fi
+
+    # Special case: Use AZURE_API_VERSION value if AZURE_OPENAI_API_VERSION not set
+    if [[ "$key" == "AZURE_OPENAI_API_VERSION" ]] && [[ -z "$val" ]] && [[ -n "${AZURE_API_VERSION:-}" ]]; then
+        val="${AZURE_API_VERSION}"
+    fi
+
+    printf '%s' "$val"
+}
+
+sync_env_keys() {
+    local env_file="${1:-$ENV_FILE}"
+
+    if [[ ! -f "$env_file" ]]; then
+        print_warning "Cannot sync keys: $env_file not found"
+        return 1
+    fi
+
+    local count=0
+    local -a available_keys=()
+
+    for key in "${API_KEYS[@]}"; do
+        local val
+        val=$(get_env_value "$key")
+        if [[ -n "$val" ]]; then
+            available_keys+=("$key")
+            ((count++))
+        fi
+    done
+
+    if [[ $count -eq 0 ]]; then
+        return 0
+    fi
+
+    # Prompt user with context (show which keys will be synced)
+    echo "" >&2
+    print_info "Found $count API key(s) in environment: ${available_keys[*]}"
+    read -p "Sync these to $env_file? (Y/n): " -n 1 -r
+    echo
+
+    # User declined
+    if [[ $REPLY =~ ^[Nn]$ ]]; then
+        print_info "Skipping key sync"
+        return 0
+    fi
+
+    # Perform sync using temp file for atomicity
+    local temp_file
+    temp_file=$(mktemp)
+
+    # Set up cleanup trap
+    trap 'rm -f "$temp_file" "${temp_file}.bak" 2>/dev/null || true' RETURN
+
+    cp "$env_file" "$temp_file"
+
+    # Replace key values (no placeholder checking - unconditional replace)
+    for key in "${available_keys[@]}"; do
+        local val
+        val=$(get_env_value "$key")
+
+        # Handle both commented and uncommented lines
+        sed -i.bak "s@^# *${key}=.*@${key}=${val}@; s@^${key}=.*@${key}=${val}@" "$temp_file"
+
+        print_success "Synced $key"
+    done
+
+    mv "$temp_file" "$env_file"
+
+    # Cleanup backup file
+    rm -f "${temp_file}.bak"
+
+    echo "" >&2
+    print_success "Synced $count API key(s) to $env_file"
+
+    return 0
 }
 
 get_claude_desktop_config_path() {
@@ -403,19 +500,44 @@ test_installation() {
 
     print_info "Verifying server can start..."
 
+    # Detect OS and set correct paths for virtual environment
+    local venv_bin="bin"
+    local python_exe="python"
+
+    case "$(uname -s)" in
+        CYGWIN*|MINGW*|MSYS*)
+            # Windows: Use Scripts directory and python.exe
+            venv_bin="Scripts"
+            python_exe="python.exe"
+            ;;
+    esac
+
+    local python_path="$VENV_PATH/$venv_bin/$python_exe"
+
     # Test that server.py can be imported
-    if "$VENV_PATH/bin/python" -c "import sys; sys.path.insert(0, '.'); from src.server import mcp" 2>/dev/null; then
+    if "$python_path" -c "import sys; sys.path.insert(0, '.'); from src.server import mcp" 2>/dev/null; then
         print_success "Server module loads correctly"
     else
         print_error "Server module failed to load"
-        print_info "Try running: $VENV_PATH/bin/python src/server.py"
+        print_info "Try running: $python_path src/server.py"
         return 1
     fi
 
     # Check if .env exists and has at least one API key
     if [[ -f "$ENV_FILE" ]]; then
-        if grep -q "API_KEY=sk-\|API_KEY=.*[a-zA-Z0-9]" "$ENV_FILE"; then
-            print_success "API keys configured in $ENV_FILE"
+        local keys_found=0
+
+        # Use global API_KEYS array (DRY)
+        for key in "${API_KEYS[@]}"; do
+            # Check for non-placeholder values
+            # Match: starts with KEY=, then sk- followed by non-dot OR any two non-dots
+            if grep -qE "^${key}=sk-[^.]|^${key}=[^.][^.]" "$ENV_FILE"; then
+                ((keys_found++))
+            fi
+        done
+
+        if [[ $keys_found -gt 0 ]]; then
+            print_success "Found $keys_found API key(s) in $ENV_FILE"
         else
             print_warning "No API keys found in $ENV_FILE"
             print_info "Add at least one API key before using the server"

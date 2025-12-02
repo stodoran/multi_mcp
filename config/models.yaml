@@ -52,6 +52,23 @@ models:
     notes: "Strong general-purpose model, temperature=1.0 only"
 
   # ============================================
+  # Azure OpenAI Models
+  # ============================================
+  # Note: You can also replace openai with azure above, provide 
+  # the right env variables and it should also work
+  azure-gpt-5-mini:
+    litellm_model: azure/gpt-5-mini
+    aliases:
+      - azure-mini
+      - az-mini
+    params:
+      api_version: "2025-04-01-preview"
+      # api_base and api_key auto-detected from AZURE_API_BASE and AZURE_API_KEY in .env
+    constraints:
+      temperature: 1.0  # gpt-5 family only supports 1.0
+    notes: "Azure Mini deployment"
+
+  # ============================================
   # Anthropic Models
   # ============================================
 
