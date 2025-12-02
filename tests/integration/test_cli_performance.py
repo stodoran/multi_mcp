@@ -29,8 +29,8 @@ class TestCLIPerformance:
         duration = time.time() - start
 
         assert result.status == "success"
-        # Should complete in under 30 seconds for simple prompt
-        assert duration < 30.0, f"CLI took {duration:.2f}s, expected <30s"
+        # Should complete in under 60 seconds for simple prompt (without VCR caching)
+        assert duration < 60.0, f"CLI took {duration:.2f}s, expected <60s"
         # Metadata latency should match actual duration (within 1 second tolerance)
         assert abs(result.metadata.latency_ms / 1000 - duration) < 1.0
 

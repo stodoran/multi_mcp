@@ -9,6 +9,7 @@ from src.models.resolver import ModelResolver
 
 
 @pytest.mark.skipif(not os.getenv("RUN_E2E"), reason="Integration test")
+@pytest.mark.skipif(not os.getenv("AZURE_API_KEY"), reason="Azure credentials not configured")
 async def test_azure_model_call():
     """Test Azure OpenAI model call."""
     messages = [{"role": "user", "content": "Say 'Azure test successful' and nothing else."}]
@@ -31,6 +32,7 @@ async def test_azure_alias_resolution():
 
 
 @pytest.mark.skipif(not os.getenv("RUN_E2E"), reason="Integration test")
+@pytest.mark.skipif(not os.getenv("AZURE_API_KEY"), reason="Azure credentials not configured")
 async def test_azure_env_variables_accessible():
     """Test that Azure env variables are accessible to LiteLLM."""
     # LiteLLM should be able to see these

@@ -17,7 +17,7 @@ class TestChatWithCLI:
     """Test chat tool with CLI models."""
 
     @pytest.mark.integration
-    @pytest.mark.timeout(30)
+    @pytest.mark.timeout(60)  # Increased for real API calls without VCR caching
     async def test_chat_with_cli_model(self, skip_if_no_any_cli, temp_project_dir, has_gemini_cli):
         """Chat tool works with CLI model."""
         if not has_gemini_cli:
