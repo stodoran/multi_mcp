@@ -142,8 +142,8 @@ Complete this checklist, then call step 2 with your findings and relevant_files.
             parsed_results.append(
                 CodeReviewModelResult(
                     content=result.content,
-                    status="error",
-                    error="Failed to parse LLM response as JSON",
+                    status="warning",
+                    error="Failed to parse LLM response as JSON - returning raw result in content field",
                     metadata=result.metadata,
                 )
             )
@@ -183,13 +183,16 @@ Complete this checklist, then call step 2 with your findings and relevant_files.
     # Determine aggregate status
     total_models = len(models)
     successful_models = sum(1 for r in parsed_results if r.status == "success")
+    warning_models = sum(1 for r in parsed_results if r.status == "warning")
+    error_models = sum(1 for r in parsed_results if r.status == "error")
 
     if successful_models == total_models:
         aggregate_status = "success"
-    elif successful_models > 0:
-        aggregate_status = "partial"
-    else:
+    elif error_models == total_models:
         aggregate_status = "error"
+    else:
+        # Mix of success/warning/error, or all warnings
+        aggregate_status = "partial"
 
     # Consensus next_action: if ANY model needs files, action = continue
     if needs_files_count > 0:
@@ -207,15 +210,26 @@ Complete this checklist, then call step 2 with your findings and relevant_files.
 
     # Build aggregate summary with stats
     issue_count = len(all_issues)
+
+    # Build status breakdown string
+    status_parts = []
+    if successful_models > 0:
+        status_parts.append(f"{successful_models} succeeded")
+    if warning_models > 0:
+        status_parts.append(f"{warning_models} with warnings")
+    if error_models > 0:
+        status_parts.append(f"{error_models} failed")
+    status_breakdown = f"{'/'.join(status_parts)}" if status_parts else "no models"
+
     if issue_count == 0:
         # Check if review actually succeeded before claiming "no issues"
         if needs_files_count > 0:
-            aggregate_summary = f"{successful_models}/{total_models} models succeeded. Review paused - additional files required."
+            aggregate_summary = f"{status_breakdown} of {total_models} models. Review paused - additional files required."
         elif aggregate_status == "success":
-            aggregate_summary = f"{successful_models}/{total_models} models succeeded. No issues found."
+            aggregate_summary = f"{status_breakdown} of {total_models} models. No issues found."
         else:
             # Review failed or partially failed - don't claim success
-            aggregate_summary = f"{successful_models}/{total_models} models succeeded. Review incomplete - no issues reported."
+            aggregate_summary = f"{status_breakdown} of {total_models} models. Review incomplete - no issues reported."
     else:
         # Group by severity
         by_severity = {"critical": [], "high": [], "medium": [], "low": []}
@@ -231,12 +245,12 @@ Complete this checklist, then call step 2 with your findings and relevant_files.
                 severity_parts.append(f"{count} {sev}")
 
         aggregate_summary = (
-            f"{successful_models}/{total_models} models succeeded. "
+            f"{status_breakdown} of {total_models} models. "
             f"Found {issue_count} issue(s): {', '.join(severity_parts)}. "
             f"See `results` for details."
         )
 
-    logger.info(f"[CODEREVIEW] Complete: {successful_models}/{total_models} models succeeded, {issue_count} total issues found")
+    logger.info(f"[CODEREVIEW] Complete: {status_breakdown} of {total_models} models, {issue_count} total issues found")
 
     result = CodeReviewResponse(
         thread_id=thread_id,

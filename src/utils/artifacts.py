@@ -87,13 +87,15 @@ async def save_artifact_files(
     artifacts_sub = Path(settings.artifacts_dir)
 
     if artifacts_sub.is_absolute():
-        raise ValueError("ARTIFACTS_DIR must be a path relative to base_path, not absolute")
-
-    artifacts_path = (base / artifacts_sub).resolve()
-    try:
-        artifacts_path.relative_to(base)
-    except ValueError as exc:
-        raise ValueError("ARTIFACTS_DIR escapes base_path") from exc
+        # Use absolute path directly
+        artifacts_path = artifacts_sub.resolve()
+    else:
+        # Resolve relative to base_path and validate it doesn't escape
+        artifacts_path = (base / artifacts_sub).resolve()
+        try:
+            artifacts_path.relative_to(base)
+        except ValueError as exc:
+            raise ValueError("ARTIFACTS_DIR escapes base_path") from exc
 
     artifacts_path.mkdir(parents=True, exist_ok=True)
 

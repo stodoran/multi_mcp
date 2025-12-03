@@ -39,9 +39,10 @@ class Settings(BaseSettings):
     openrouter_api_key: str | None = Field(default=None, alias="OPENROUTER_API_KEY")
 
     # Azure OpenAI (optional - LiteLLM picks these up from os.environ)
-    azure_openai_api_key: str | None = Field(default=None, alias="AZURE_OPENAI_API_KEY")
-    azure_openai_endpoint: str | None = Field(default=None, alias="AZURE_OPENAI_ENDPOINT")
-    azure_openai_api_version: str | None = Field(default=None, alias="AZURE_OPENAI_API_VERSION")
+    # Note: These are the exact variable names LiteLLM expects
+    azure_api_key: str | None = Field(default=None, alias="AZURE_API_KEY")
+    azure_api_base: str | None = Field(default=None, alias="AZURE_API_BASE")
+    azure_api_version: str = Field(default="2025-04-01-preview", alias="AZURE_API_VERSION")
 
     # Model defaults
     default_model: str = Field(default="gpt-5-mini", alias="DEFAULT_MODEL")
@@ -113,8 +114,23 @@ class Settings(BaseSettings):
     artifacts_dir: str = Field(
         default="",
         alias="ARTIFACTS_DIR",
-        description="Directory for artifact logging (relative to base_path). Empty = disabled.",
+        description="Directory for artifact logging (relative to base_path or absolute). Empty = disabled.",
     )
+
+    @model_validator(mode="after")
+    def set_azure_env_vars(self) -> "Settings":
+        """Set Azure environment variables so LiteLLM can pick them up.
+
+        LiteLLM reads Azure config directly from os.environ, so we need to
+        ensure our settings (including defaults) are available there.
+        """
+        import os
+
+        # Set AZURE_API_VERSION with default if not already in environment
+        if self.azure_api_version and not os.getenv("AZURE_API_VERSION"):
+            os.environ["AZURE_API_VERSION"] = self.azure_api_version
+
+        return self
 
 
 # Global settings instance

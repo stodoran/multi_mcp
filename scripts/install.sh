@@ -30,9 +30,9 @@ readonly API_KEYS=(
     "ANTHROPIC_API_KEY"
     "GEMINI_API_KEY"
     "OPENROUTER_API_KEY"
-    "AZURE_OPENAI_API_KEY"
-    "AZURE_OPENAI_ENDPOINT"
-    "AZURE_OPENAI_API_VERSION"
+    "AZURE_API_KEY"
+    "AZURE_API_BASE"
+    "AZURE_API_VERSION"
 )
 
 # ----------------------------------------------------------------------------
@@ -171,19 +171,10 @@ setup_env_file() {
 }
 
 get_env_value() {
-    # Returns the effective value for a canonical env key, including Azure fallbacks
+    # Returns the effective value for a canonical env key
+    # Note: LiteLLM expects AZURE_API_KEY, AZURE_API_BASE, AZURE_API_VERSION
     local key="$1"
     local val="${!key:-}"
-
-    # Special case: Use AZURE_ENDPOINT value if AZURE_OPENAI_ENDPOINT not set
-    if [[ "$key" == "AZURE_OPENAI_ENDPOINT" ]] && [[ -z "$val" ]] && [[ -n "${AZURE_ENDPOINT:-}" ]]; then
-        val="${AZURE_ENDPOINT}"
-    fi
-
-    # Special case: Use AZURE_API_VERSION value if AZURE_OPENAI_API_VERSION not set
-    if [[ "$key" == "AZURE_OPENAI_API_VERSION" ]] && [[ -z "$val" ]] && [[ -n "${AZURE_API_VERSION:-}" ]]; then
-        val="${AZURE_API_VERSION}"
-    fi
 
     printf '%s' "$val"
 }
@@ -228,8 +219,8 @@ sync_env_keys() {
     local temp_file
     temp_file=$(mktemp)
 
-    # Set up cleanup trap
-    trap 'rm -f "$temp_file" "${temp_file}.bak" 2>/dev/null || true' RETURN
+    # Set up cleanup trap (use ${var:-} to avoid unbound variable errors with set -u)
+    trap 'rm -f "${temp_file:-}" "${temp_file:-}.bak" 2>/dev/null || true' RETURN
 
     cp "$env_file" "$temp_file"
 
@@ -266,6 +257,13 @@ get_claude_desktop_config_path() {
             ;;
         CYGWIN*|MINGW*|MSYS*)
             # Windows: Convert Windows path to POSIX for filesystem operations
+            # Use ${APPDATA:-} to avoid unbound variable error with set -u
+            if [[ -z "${APPDATA:-}" ]]; then
+                print_warning "APPDATA environment variable not set; cannot locate Claude config on Windows"
+                echo ""
+                return
+            fi
+
             local win_path="$APPDATA/Claude/claude_desktop_config.json"
             if command -v cygpath &>/dev/null; then
                 cygpath -u "$win_path"
@@ -317,8 +315,8 @@ update_mcp_config_file() {
     # Prepare for atomic config file update
     local temp_config
     temp_config=$(mktemp)
-    # Cleanup temp file on function exit (use a subshell-safe approach)
-    trap 'rm -f "$temp_config" 2>/dev/null || true; trap - RETURN' RETURN
+    # Cleanup temp file on function exit (use ${var:-} to avoid unbound variable errors with set -u)
+    trap 'rm -f "${temp_config:-}" 2>/dev/null || true; trap - RETURN' RETURN
 
     if [[ ! -f "$config_path" ]]; then
         # Create new config file using jq --arg for safe escaping

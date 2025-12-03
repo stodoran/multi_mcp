@@ -131,8 +131,10 @@ class ModelResponse(BaseModel):
     """Base response from any model call. Model info is in metadata.model."""
 
     content: str = Field(..., description="LLM response content")
-    status: Literal["success", "error"] = Field(..., description="Whether this model call succeeded")
-    error: str | None = Field(default=None, description="Error message if status is 'error'")
+    status: Literal["success", "warning", "error"] = Field(
+        ..., description="Model call status: 'success' (succeeded), 'warning' (succeeded with issues), 'error' (failed)"
+    )
+    error: str | None = Field(default=None, description="Error/warning message if status is 'error' or 'warning'")
     metadata: ModelResponseMetadata = Field(..., description="Execution metadata (contains model name, tokens, latency)")
 
     @classmethod

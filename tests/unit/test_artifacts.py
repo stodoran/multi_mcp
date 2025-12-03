@@ -281,9 +281,11 @@ async def test_save_artifact_files_both(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_save_artifact_files_rejects_absolute_path(tmp_path, monkeypatch):
-    """Test that absolute ARTIFACTS_DIR is rejected."""
-    monkeypatch.setenv("ARTIFACTS_DIR", "/tmp/artifacts")
+async def test_save_artifact_files_absolute_path(tmp_path, monkeypatch):
+    """Test that absolute ARTIFACTS_DIR is supported."""
+    # Create an absolute path for artifacts
+    abs_artifacts_dir = tmp_path / "global_artifacts"
+    monkeypatch.setenv("ARTIFACTS_DIR", str(abs_artifacts_dir))
 
     # Reload settings
     from src.config import Settings
@@ -300,18 +302,23 @@ async def test_save_artifact_files_rejects_absolute_path(tmp_path, monkeypatch):
         "request": {"name": "Test", "message": "Test"},
     }
 
-    # Should raise ValueError for absolute path
-    with pytest.raises(ValueError, match="must be a path relative to base_path"):
-        await save_artifact_files(
-            base_path=str(tmp_path),
-            name="Test",
-            workflow="codereview",
-            model="gpt-5-mini",
-            content="Test",
-            issues_found=None,
-            metadata=metadata,
-            step_number=1,
-        )
+    # Should succeed with absolute path
+    created_files = await save_artifact_files(
+        base_path=str(tmp_path / "project"),  # Different base_path
+        name="Test",
+        workflow="codereview",
+        model="gpt-5-mini",
+        content="Test content",
+        issues_found=None,
+        metadata=metadata,
+        step_number=1,
+    )
+
+    # Files should be created in the absolute path, not relative to base_path
+    assert len(created_files) == 1
+    assert created_files[0].exists()
+    assert abs_artifacts_dir.exists()
+    assert created_files[0].parent == abs_artifacts_dir
 
 
 @pytest.mark.asyncio

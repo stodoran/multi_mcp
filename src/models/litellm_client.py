@@ -85,7 +85,6 @@ class LiteLLMClient:
                 "timeout": timeout,
             }
 
-            # Add max_tokens if configured (allows overriding default output limits)
             if model_config.max_tokens is not None:
                 kwargs["max_tokens"] = model_config.max_tokens
                 logger.debug(f"[MODEL_CALL] Using max_tokens={model_config.max_tokens} from config")

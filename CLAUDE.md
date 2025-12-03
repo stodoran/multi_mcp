@@ -319,11 +319,15 @@ Models are defined in `config/models.yaml`. See README.md for model aliases and 
 **Status:**
 - ✅ All integration tests passing
 - Runtime: ~10-15 minutes (due to real API calls)
-- **VCR Enabled**: 26 tests use record/replay for 90% speedup
+- **VCR Status**: Currently **DISABLED** due to httpx/litellm compatibility issues (see below)
 
 ### VCR Record/Replay Pattern
 
-**What is VCR?** VCR (Video Cassette Recorder) records real API interactions on first run, then replays them on subsequent runs - achieving 90% speedup (10-15 min → <1 min).
+**Current Status:** VCR is currently disabled (`--disable-recording` in `pyproject.toml`) due to compatibility issues between pytest-recording/VCR.py and LiteLLM's httpx client. All tests make real API calls.
+
+**Issue:** VCR.py had breaking changes for httpx support, and cassettes recorded with older versions result in empty responses (`body: string: ''`), causing "Connection error" failures. Tests pass when VCR is disabled.
+
+**What is VCR?** VCR (Video Cassette Recorder) records real API interactions on first run, then replays them on subsequent runs - achieving 90% speedup (10-15 min → <1 min) when working properly.
 
 **How It Works:**
 
@@ -366,7 +370,12 @@ RUN_E2E=1 pytest tests/integration/ --disable-recording -v
 - **Storage**: `tests/cassettes/` directory
 - **Matching**: URI + method + body
 
-**Benefits:**
+**Future Solutions:**
+- Wait for pytest-recording/VCR.py to fully support httpx with LiteLLM
+- Use LiteLLM's built-in `mock_response` parameter for mocking (see [docs](https://docs.litellm.ai/docs/completion/mock_requests))
+- Re-enable VCR when compatibility is confirmed
+
+**Benefits** (when VCR is enabled):
 - 90% speedup in development (replay mode)
 - Cost savings (no repeated LLM API calls)
 - Offline testing (works without API keys after first record)

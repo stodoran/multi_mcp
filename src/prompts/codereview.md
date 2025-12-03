@@ -119,14 +119,14 @@ You MUST ALWAYS output in JSON:
 ```json
 {
   "status": "review_complete",
-  "message": "This field MUST be valid markdown.\nIt should have sections like:\n## **Priority Matrix**\n| 🔴 Critical | 🟠 High | 🟡 Medium | 🟢 Low |\n|---|---|---|---|\n| N | N | N | N |\n\n## **Overall Code Quality Summary:** (one short paragraph)\n\n## **Top 3 Priority Fixes:** (quick bullets with category icons)\n- 🔒 [Issue description]\n- 🐛 [Issue description]\n\n## **Positive Aspects:** (what was done well with examples)\n| Pattern | Location | Impact |\n|---|---|---|\n| ✅ Good practice | `file.py:line` | Description |\n\n## **Potential Review Gaps:** (what was not covered or needs further review)",
+  "message": "This field MUST be valid markdown.\nIt should have sections like:\n## **Priority Matrix**\n| 🔴 Critical | 🟠 High | 🟡 Medium | 🟢 Low |\n|---|---|---|---|\n| N | N | N | N |\n\n## **Overall Code Quality Summary:** (one short paragraph)\n\n## **Top 3 Priority Fixes:** (quick bullets with category icons)\n- 🔒 [Short Issue description]\n- 🐛 [Short Issue description]\n\n## **Positive Aspects:** (briefly, <= points on what was done well with examples)\n| Pattern | Location | Impact |\n|---|---|---|\n| ✅ Good practice | `file.py:line` | Description |\n\n## **Potential Review Gaps:** (briefly, what was not covered or needs further review)",
   "issues_found": [
     {
       "severity": "critical|high|medium|low",
       "previous_severity": "new|critical|high|medium|low",
       "description": "<Brief explanation with category icon. Start with icon like: 🔒 SQL injection in login query>",
       "location": "file.py:23",
-      "fix": "<Show ONLY the lines that need changing. Use comments like '... existing code ...' to denote unchanged context. Ensure indentation matches exactly. Do NOT include line number markers.>"
+      "fix": "<Show ONLY the lines that need changing. Keep it very brief. Use comments like '... existing code ...' to denote unchanged context. Ensure indentation matches exactly. Do NOT include line number markers.>"
     }
   ]
 }

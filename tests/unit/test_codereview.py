@@ -314,7 +314,7 @@ class TestCodeReviewLLMResponseParsing:
         # Multi-model response structure
         assert result["status"] == "success"  # All models succeeded
         assert result["next_action"]["action"] == "stop"  # All completed
-        assert "models succeeded" in result["summary"]  # Aggregate summary with stats
+        assert "succeeded" in result["summary"]  # Aggregate summary with stats
         assert "Found 2 issue" in result["summary"]  # Should mention issues found
         assert len(result["results"]) > 0  # Has model results
         assert result["results"][0]["issues_found"] is not None  # Has issues
@@ -356,10 +356,10 @@ class TestCodeReviewErrorHandling:
             result = await codereview_impl(**{**base_params, "thread_id": thread_id})
 
         # Multi-model response structure
-        assert result["status"] == "error"  # Invalid JSON treated as error
+        assert result["status"] == "partial"  # Invalid JSON treated as warning, aggregate is partial
         assert len(result["results"]) == 1
-        assert result["results"][0]["status"] == "error"  # Error status
-        assert result["results"][0]["error"] == "Failed to parse LLM response as JSON"
+        assert result["results"][0]["status"] == "warning"  # Warning status (not error)
+        assert result["results"][0]["error"] == "Failed to parse LLM response as JSON - returning raw result in content field"
         assert result["results"][0]["content"] == plain_text  # Raw response preserved
         assert result["results"][0]["metadata"]["model"] == "gpt-5-mini"
 
