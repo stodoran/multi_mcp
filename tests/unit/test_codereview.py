@@ -119,6 +119,7 @@ class TestCodeReviewStepLogic:
                 next_action="continue",
                 models=["gpt-5-mini"],
                 base_path="/tmp/test",
+                thread_id="test-thread",
                 relevant_files=too_many_files,
             )
 
@@ -291,9 +292,9 @@ class TestCodeReviewLLMResponseParsing:
 
     @pytest.mark.asyncio
     async def test_llm_response_review_complete_with_issues(self, base_params):
-        """Test parsing 'review_complete' with issues."""
+        """Test parsing 'success' with issues."""
         json_response = """{
-                "status": "review_complete",
+                "status": "success",
                 "message": "Found 2 security issues",
                 "issues_found": [
                     {"severity": "high", "location": "auth.py:45", "description": "SQL injection risk"},
@@ -533,3 +534,180 @@ class TestCodeReviewContextBuilding:
             # We can't easily verify this without inspecting the call,
             # but we can at least confirm the LLM was called
             assert mock_llm.called
+
+
+class TestModelStatusSummary:
+    """Tests for _build_model_status_summary helper function."""
+
+    def test_extract_exception_names(self):
+        """Test that exception names are extracted correctly from error strings."""
+        from src.tools.codereview import _build_model_status_summary
+
+        # Test various error formats
+        test_cases = [
+            # Format: module.ExceptionName: message
+            {
+                "error": "litellm.AuthenticationError: Missing Anthropic API Key",
+                "expected": "litellm.AuthenticationError",
+            },
+            # Format: ExceptionName: message
+            {
+                "error": "TimeoutError: Request timed out after 300.0s",
+                "expected": "TimeoutError",
+            },
+            # Format: module.submodule.ExceptionName: message
+            {
+                "error": "openai.error.RateLimitError: Rate limit exceeded",
+                "expected": "openai.error.RateLimitError",
+            },
+            # No colon format
+            {
+                "error": "Connection refused",
+                "expected": "Connection refused",
+            },
+            # Long error message (should truncate at 50 chars)
+            {
+                "error": "This is a very long error message that exceeds fifty characters and should be truncated",
+                "expected": "This is a very long error message that exceeds fif",
+            },
+        ]
+
+        for test_case in test_cases:
+            # Create mock result with error
+            mock_result = type(
+                "MockResult",
+                (),
+                {
+                    "status": "error",
+                    "error": test_case["error"],
+                    "metadata": type("MockMetadata", (), {"model": "test-model"})(),
+                },
+            )()
+
+            summary = _build_model_status_summary([mock_result])
+            assert test_case["expected"] in summary, f"Expected '{test_case['expected']}' in '{summary}'"
+
+    def test_success_with_issue_counts(self):
+        """Test that successful models show issue counts."""
+        from src.tools.codereview import _build_model_status_summary
+
+        # Create mock successful result
+        mock_result = type(
+            "MockResult",
+            (),
+            {
+                "status": "success",
+                "issues_found": [{"severity": "high"}, {"severity": "medium"}],
+                "metadata": type("MockMetadata", (), {"model": "gpt-5-mini"})(),
+            },
+        )()
+
+        summary = _build_model_status_summary([mock_result])
+        assert "gpt-5-mini (2 issues)" in summary
+
+    def test_mixed_results(self):
+        """Test mixed success and error results."""
+        from src.tools.codereview import _build_model_status_summary
+
+        mock_success = type(
+            "MockResult",
+            (),
+            {
+                "status": "success",
+                "issues_found": [{"severity": "high"}],
+                "metadata": type("MockMetadata", (), {"model": "gpt-5-nano"})(),
+            },
+        )()
+
+        mock_error = type(
+            "MockResult",
+            (),
+            {
+                "status": "error",
+                "error": "litellm.AuthenticationError: Missing API key",
+                "metadata": type("MockMetadata", (), {"model": "claude-haiku"})(),
+            },
+        )()
+
+        summary = _build_model_status_summary([mock_success, mock_error])
+        assert "gpt-5-nano (1 issues)" in summary
+        assert "claude-haiku (litellm.AuthenticationError)" in summary
+
+
+class TestConsolidationValidation:
+    """Tests for consolidation issue count validation."""
+
+    @pytest.mark.asyncio
+    async def test_consolidation_warning_when_count_increases(self, caplog):
+        """Test that a warning is logged when consolidation increases issue count."""
+        # Mock consolidation to return more issues than input
+        mock_consolidated = {
+            "status": "success",
+            "message": "Consolidated review",
+            "issues_found": [
+                {"severity": "high", "location": "test.py:1", "description": "Issue 1", "found_by": ["model1"]},
+                {"severity": "high", "location": "test.py:2", "description": "Issue 2", "found_by": ["model1"]},
+                {"severity": "medium", "location": "test.py:3", "description": "Issue 3", "found_by": ["model2"]},
+                {"severity": "low", "location": "test.py:4", "description": "Issue 4", "found_by": ["model2"]},
+            ],
+        }
+
+        # Mock raw results with fewer issues
+        mock_raw_results = [
+            mock_llm_response(
+                '{"status": "success", "issues_found": [{"severity": "high", "location": "test.py:1", "description": "Issue 1"}]}',
+                model="model1",
+            ),
+            mock_llm_response(
+                '{"status": "success", "issues_found": [{"severity": "medium", "location": "test.py:3", "description": "Issue 3"}]}',
+                model="model2",
+            ),
+        ]
+
+        # Mock the consolidation to return consolidated result
+        from src.schemas.base import ModelResponseMetadata
+        from src.schemas.codereview import CodeReviewModelResult
+
+        mock_consolidated_result = CodeReviewModelResult(
+            content=mock_consolidated["message"],
+            status=mock_consolidated["status"],
+            issues_found=mock_consolidated["issues_found"],
+            metadata=ModelResponseMetadata(
+                model="model1, model2",
+                prompt_tokens=100,
+                completion_tokens=50,
+                total_tokens=150,
+                latency_ms=1000,
+                source_models=["model1", "model2"],
+                consolidation_model="gpt-5-mini",
+            ),
+        )
+
+        with (
+            patch("src.utils.llm_runner.execute_parallel", return_value=mock_raw_results),
+            patch("src.utils.consolidation.consolidate_model_results", return_value=mock_consolidated_result),
+            patch("src.utils.prompts.build_expert_context", return_value="<expert context>"),
+            patch("src.utils.repository.build_repository_context", return_value=None),
+            patch("src.memory.store.store_conversation_turn"),
+            patch("src.config.settings.max_codereview_response_size", 100),  # Force consolidation
+        ):
+            result = await codereview_impl(
+                name="Test Review",
+                content="Review code",
+                step_number=2,
+                next_action="continue",
+                models=["model1", "model2"],
+                base_path="/tmp/test",
+                thread_id="test-thread",
+                relevant_files=["/tmp/test/file.py"],
+            )
+
+            # Check that warning was logged
+            assert any(
+                "Consolidation increased issue count" in record.message for record in caplog.records if record.levelname == "WARNING"
+            )
+
+            # Check summary format when count increases
+            assert "issues after consolidation (original:" in result["summary"]
+            assert "4 issues" in result["summary"]  # Consolidated count
+            assert "(original: 2)" in result["summary"]  # Original count

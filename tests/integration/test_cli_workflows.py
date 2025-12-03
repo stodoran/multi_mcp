@@ -17,7 +17,7 @@ class TestChatWithCLI:
     """Test chat tool with CLI models."""
 
     @pytest.mark.integration
-    @pytest.mark.timeout(60)  # Increased for real API calls without VCR caching
+    @pytest.mark.timeout(150)  # Increased for real API calls without VCR caching
     async def test_chat_with_cli_model(self, skip_if_no_any_cli, temp_project_dir, has_gemini_cli):
         """Chat tool works with CLI model."""
         if not has_gemini_cli:
@@ -81,7 +81,7 @@ class TestCompareWithCLI:
     """Test compare tool with CLI models."""
 
     @pytest.mark.integration
-    @pytest.mark.timeout(60)
+    @pytest.mark.timeout(150)
     async def test_compare_with_single_cli_model(self, skip_if_no_any_cli, temp_project_dir, has_gemini_cli):
         """Compare works with a single CLI model."""
         if not has_gemini_cli:
@@ -230,7 +230,7 @@ class TestCLIErrorHandling:
         assert results_by_model["nonexistent-cli"]["status"] == "error"
 
     @pytest.mark.integration
-    @pytest.mark.timeout(90)
+    @pytest.mark.timeout(150)  # Two-step debate: 60s timeout per step, 2 steps = ~120s total
     async def test_debate_with_one_cli_failure(self, temp_project_dir, integration_test_model, has_gemini_cli, has_codex_cli):
         """Debate handles CLI failure gracefully."""
         if not (has_gemini_cli or has_codex_cli):

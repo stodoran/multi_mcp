@@ -1,16 +1,57 @@
 """Code review tool implementation with multi-model support."""
 
 import logging
+from collections import Counter
 from typing import Literal
 
 from src.prompts import CODEREVIEW_PROMPT
 from src.schemas.base import NextAction
 from src.schemas.codereview import CodeReviewModelResult, CodeReviewResponse
-from src.utils.json_parser import parse_llm_json
 from src.utils.message_builder import MessageBuilder
 from src.utils.prompts import build_expert_context
 
 logger = logging.getLogger(__name__)
+
+
+def _count_issues_by_severity(issues: list[dict]) -> list[str]:
+    """Count issues by severity and return formatted severity parts.
+
+    Args:
+        issues: List of issue dicts with 'severity' field
+
+    Returns:
+        List of formatted strings like ["5 critical", "3 high"]
+    """
+    return [f"{count} {sev}" for sev, count in Counter(issue.get("severity", "unknown") for issue in issues).items()]
+
+
+def _build_model_status_summary(raw_results: list) -> str:
+    """Build summary of which models succeeded/failed and why.
+
+    Args:
+        raw_results: List of model results with status and metadata
+
+    Returns:
+        Formatted string like "gpt-5-mini (3 issues), codex (TimeoutError), gemini-3 (5 issues)"
+
+    Note:
+        For errors, extracts the exception name from error strings (e.g., "AuthenticationError" from
+        "litellm.AuthenticationError: Missing API key"). This keeps error messages concise and clear.
+    """
+    parts = []
+    for result in raw_results:
+        model = result.metadata.model
+        if result.status == "success":
+            # Count issues if available
+            issues = getattr(result, "issues_found", None) or []
+            issue_count = len(issues) if isinstance(issues, list) else 0
+            parts.append(f"{model} ({issue_count} issues)")
+        else:
+            # Extract exception name from error string (e.g., "litellm.AuthenticationError: message" -> "litellm.AuthenticationError")
+            error = result.error or "error"
+            exception_name = error.split(":", 1)[0].strip() if ":" in error else error[:50]
+            parts.append(f"{model} ({exception_name})")
+    return ", ".join(parts)
 
 
 async def codereview_impl(
@@ -115,149 +156,250 @@ Complete this checklist, then call step 2 with your findings and relevant_files.
             await store_conversation_turn(thread_id, messages, result.content)
             break
 
-    # Parse and aggregate results
-    parsed_results: list[CodeReviewModelResult] = []
-    all_issues: list[dict] = []
-    success_count = 0
-    needs_files_count = 0
+    # Check if consolidation is needed based on response size AND number of successful models
+    from src.config import settings
 
-    for result in raw_results:
-        if result.status == "error":
-            # Keep error responses
-            parsed_results.append(
-                CodeReviewModelResult(
-                    content=result.error or "Unknown error",
-                    status="error",
-                    error=result.error,
-                    metadata=result.metadata,
+    total_size = sum(len(r.content.encode("utf-8")) for r in raw_results)
+    total_models = len(models)
+    successful_count = sum(1 for r in raw_results if r.status == "success")
+
+    # Only consolidate if we have 2+ successful models AND response is large
+    should_consolidate = successful_count >= 2 and total_size > settings.max_codereview_response_size
+
+    logger.info(
+        f"[CODEREVIEW] Total response size: {total_size} bytes "
+        f"(threshold: {settings.max_codereview_response_size}), "
+        f"successful models: {successful_count}/{total_models}, "
+        f"consolidate: {should_consolidate}"
+    )
+
+    if should_consolidate:
+        # V3: Consolidate all model results into single result
+        from src.utils.consolidation import consolidate_model_results
+
+        logger.info(f"[CODEREVIEW] Consolidating {len(raw_results)} model results")
+
+        # Get typed CodeReviewModelResult directly from consolidation
+        consolidated_result = await consolidate_model_results(raw_results)
+
+        # Determine aggregate status and next_action
+        issues = consolidated_result.issues_found or []
+        issue_count = len(issues)
+
+        # Parse issues from raw results for model summary (need to parse JSON first)
+        from src.utils.json_parser import parse_llm_json
+
+        parsed_raw_results: list[CodeReviewModelResult] = []
+        for r in raw_results:
+            if r.status == "success":
+                parsed_json = parse_llm_json(r.content)
+                if parsed_json and isinstance(parsed_json, dict):
+                    # Convert ModelResponse to CodeReviewModelResult with issues_found
+                    parsed_raw_results.append(
+                        CodeReviewModelResult(
+                            content=r.content,
+                            status=r.status,
+                            error=r.error,
+                            metadata=r.metadata,
+                            issues_found=parsed_json.get("issues_found", []),
+                        )
+                    )
+                else:
+                    # No valid JSON, create result with empty issues
+                    parsed_raw_results.append(
+                        CodeReviewModelResult(
+                            content=r.content,
+                            status=r.status,
+                            error=r.error,
+                            metadata=r.metadata,
+                            issues_found=[],
+                        )
+                    )
+            else:
+                # Error/warning status - create result with empty issues
+                parsed_raw_results.append(
+                    CodeReviewModelResult(
+                        content=r.content,
+                        status=r.status,
+                        error=r.error,
+                        metadata=r.metadata,
+                        issues_found=[],
+                    )
                 )
+
+        # Build model status summary with parsed issue counts
+        model_summary = _build_model_status_summary(parsed_raw_results)
+
+        # Count original issues before deduping
+        original_issue_count = sum(len(getattr(r, "issues_found", None) or []) for r in parsed_raw_results if r.status == "success")
+
+        # Validation: consolidation should not increase issue count
+        if issue_count > original_issue_count:
+            logger.warning(
+                f"[CODEREVIEW] Consolidation increased issue count from {original_issue_count} to {issue_count}. "
+                "This suggests the consolidation LLM may be splitting issues or creating new ones. "
+                "Using original_issue_count as the deduplicated count."
             )
-            continue
 
-        # Parse JSON response
-        parsed_json = parse_llm_json(result.content)
+        if consolidated_result.status == "error":
+            aggregate_status = "error"
+            aggregate_summary = f"Review failed - all {total_models} models encountered errors. Models: {model_summary}"
+            next_action_obj = NextAction(action="stop", reason="All models failed")
+        elif issue_count == 0:
+            aggregate_status = "success"
+            aggregate_summary = f"Review complete. Models: {model_summary}. No issues found after consolidation."
+            next_action_obj = NextAction(action="stop", reason="Review complete, no issues")
+        else:
+            # Count by severity
+            severity_parts = _count_issues_by_severity(issues)
 
-        # Handle parse errors explicitly
-        if not parsed_json or not isinstance(parsed_json, dict):
+            aggregate_status = "success"
+            # Format summary based on whether deduplication reduced the count
+            if issue_count < original_issue_count:
+                dedup_phrase = f"{original_issue_count} issues total, {issue_count} after deduplication"
+            elif issue_count == original_issue_count:
+                dedup_phrase = f"{issue_count} issues found"
+            else:
+                # This shouldn't happen, but handle it gracefully
+                dedup_phrase = f"{issue_count} issues after consolidation (original: {original_issue_count})"
+
+            aggregate_summary = f"Review complete. Models: {model_summary}. Found {dedup_phrase}: {', '.join(severity_parts)}."
+            next_action_obj = NextAction(action="stop", reason="Review complete")
+
+        logger.info(f"[CODEREVIEW] Consolidated result: {issue_count} issues, status={aggregate_status}")
+
+        result = CodeReviewResponse(
+            thread_id=thread_id,
+            status=aggregate_status,
+            summary=aggregate_summary,
+            results=[consolidated_result],  # Single consolidated result
+            next_action=next_action_obj,
+        )
+
+    else:
+        # V2: Return multiple results without consolidation (old behavior)
+        from src.utils.json_parser import parse_llm_json
+
+        logger.info("[CODEREVIEW] Skipping consolidation - using multi-model results")
+
+        parsed_results: list[CodeReviewModelResult] = []
+        all_issues: list[dict] = []
+        success_count = 0
+        needs_files_count = 0
+
+        for result in raw_results:
+            if result.status == "error":
+                parsed_results.append(
+                    CodeReviewModelResult(
+                        content=result.error or "Unknown error",
+                        status="error",
+                        error=result.error,
+                        metadata=result.metadata,
+                    )
+                )
+                continue
+
+            # Parse JSON response
+            parsed_json = parse_llm_json(result.content)
+
+            if not parsed_json or not isinstance(parsed_json, dict):
+                parsed_results.append(
+                    CodeReviewModelResult(
+                        content=result.content,
+                        status="warning",
+                        error="Failed to parse LLM response as JSON - returning raw result in content field",
+                        metadata=result.metadata,
+                    )
+                )
+                continue
+
+            status = parsed_json.get("status")
+            model_issues: list[dict] = []
+            if status == "success" and "issues_found" in parsed_json:
+                model_issues = parsed_json.get("issues_found", [])
+            elif status == "no_issues_found":
+                model_issues = []
+
+            # Tag issues with model name
+            for issue in model_issues:
+                issue["model"] = result.metadata.model
+
+            all_issues.extend(model_issues)
+
+            if status in ["files_required_to_continue", "focused_review_required"]:
+                needs_files_count += 1
+            elif status in ["no_issues_found", "success"]:
+                success_count += 1
+
             parsed_results.append(
                 CodeReviewModelResult(
                     content=result.content,
-                    status="warning",
-                    error="Failed to parse LLM response as JSON - returning raw result in content field",
+                    status="success",
                     metadata=result.metadata,
+                    issues_found=model_issues if model_issues is not None else None,
                 )
             )
-            continue
 
-        status = parsed_json.get("status")
+        # Determine aggregate status
+        successful_models = sum(1 for r in parsed_results if r.status == "success")
+        warning_models = sum(1 for r in parsed_results if r.status == "warning")
+        error_models = sum(1 for r in parsed_results if r.status == "error")
 
-        # Extract issues and tag with model name
-        model_issues: list[dict] = []
-        if status == "review_complete" and "issues_found" in parsed_json:
-            model_issues = parsed_json.get("issues_found", [])
-        elif status == "no_issues_found":
-            model_issues = []
-
-        # Tag issues with model name for traceability
-        for issue in model_issues:
-            issue["model"] = result.metadata.model
-
-        all_issues.extend(model_issues)
-
-        # Track statuses for consensus
-        if status in ["files_required_to_continue", "focused_review_required"]:
-            needs_files_count += 1
-        elif status in ["no_issues_found", "review_complete"]:
-            success_count += 1
-
-        # Create model result
-        parsed_results.append(
-            CodeReviewModelResult(
-                content=result.content,
-                status="success",
-                metadata=result.metadata,
-                issues_found=model_issues if model_issues is not None else None,
-            )
-        )
-
-    # Determine aggregate status
-    total_models = len(models)
-    successful_models = sum(1 for r in parsed_results if r.status == "success")
-    warning_models = sum(1 for r in parsed_results if r.status == "warning")
-    error_models = sum(1 for r in parsed_results if r.status == "error")
-
-    if successful_models == total_models:
-        aggregate_status = "success"
-    elif error_models == total_models:
-        aggregate_status = "error"
-    else:
-        # Mix of success/warning/error, or all warnings
-        aggregate_status = "partial"
-
-    # Consensus next_action: if ANY model needs files, action = continue
-    if needs_files_count > 0:
-        # Override status to indicate work is not done
-        aggregate_status = "in_progress"
-        next_action_obj = NextAction(
-            action="continue",
-            reason=f"{needs_files_count}/{total_models} models requested additional files for review",
-        )
-    else:
-        next_action_obj = NextAction(
-            action="stop",
-            reason="All models completed their review",
-        )
-
-    # Build aggregate summary with stats
-    issue_count = len(all_issues)
-
-    # Build status breakdown string
-    status_parts = []
-    if successful_models > 0:
-        status_parts.append(f"{successful_models} succeeded")
-    if warning_models > 0:
-        status_parts.append(f"{warning_models} with warnings")
-    if error_models > 0:
-        status_parts.append(f"{error_models} failed")
-    status_breakdown = f"{'/'.join(status_parts)}" if status_parts else "no models"
-
-    if issue_count == 0:
-        # Check if review actually succeeded before claiming "no issues"
-        if needs_files_count > 0:
-            aggregate_summary = f"{status_breakdown} of {total_models} models. Review paused - additional files required."
-        elif aggregate_status == "success":
-            aggregate_summary = f"{status_breakdown} of {total_models} models. No issues found."
+        if successful_models == total_models:
+            aggregate_status = "success"
+        elif error_models == total_models:
+            aggregate_status = "error"
         else:
-            # Review failed or partially failed - don't claim success
-            aggregate_summary = f"{status_breakdown} of {total_models} models. Review incomplete - no issues reported."
-    else:
-        # Group by severity
-        by_severity = {"critical": [], "high": [], "medium": [], "low": []}
-        for issue in all_issues:
-            sev = issue.get("severity", "low")
-            if sev in by_severity:
-                by_severity[sev].append(issue)
+            aggregate_status = "partial"
 
-        severity_parts = []
-        for sev in ["critical", "high", "medium", "low"]:
-            count = len(by_severity[sev])
-            if count > 0:
-                severity_parts.append(f"{count} {sev}")
+        if needs_files_count > 0:
+            aggregate_status = "in_progress"
+            next_action_obj = NextAction(
+                action="continue",
+                reason=f"{needs_files_count}/{total_models} models requested additional files",
+            )
+        else:
+            next_action_obj = NextAction(action="stop", reason="All models completed their review")
 
-        aggregate_summary = (
-            f"{status_breakdown} of {total_models} models. "
-            f"Found {issue_count} issue(s): {', '.join(severity_parts)}. "
-            f"See `results` for details."
+        # Build aggregate summary with model details
+        issue_count = len(all_issues)
+        status_parts = []
+        if successful_models > 0:
+            status_parts.append(f"{successful_models} succeeded")
+        if warning_models > 0:
+            status_parts.append(f"{warning_models} with warnings")
+        if error_models > 0:
+            status_parts.append(f"{error_models} failed")
+        status_breakdown = f"{'/'.join(status_parts)}" if status_parts else "no models"
+
+        # Build model status summary
+        model_summary = _build_model_status_summary(parsed_results)
+
+        if issue_count == 0:
+            if needs_files_count > 0:
+                aggregate_summary = (
+                    f"{status_breakdown} of {total_models} models. Models: {model_summary}. Review paused - additional files required."
+                )
+            elif aggregate_status == "success":
+                aggregate_summary = f"{status_breakdown} of {total_models} models. Models: {model_summary}. No issues found."
+            else:
+                aggregate_summary = f"{status_breakdown} of {total_models} models. Models: {model_summary}. Review incomplete."
+        else:
+            severity_parts = _count_issues_by_severity(all_issues)
+
+            aggregate_summary = (
+                f"{status_breakdown} of {total_models} models. Models: {model_summary}. "
+                f"Found {issue_count} issue(s): {', '.join(severity_parts)}."
+            )
+
+        logger.info(f"[CODEREVIEW] Complete: {status_breakdown}, {issue_count} total issues")
+
+        result = CodeReviewResponse(
+            thread_id=thread_id,
+            status=aggregate_status,
+            summary=aggregate_summary,
+            results=parsed_results,
+            next_action=next_action_obj,
         )
-
-    logger.info(f"[CODEREVIEW] Complete: {status_breakdown} of {total_models} models, {issue_count} total issues found")
-
-    result = CodeReviewResponse(
-        thread_id=thread_id,
-        status=aggregate_status,
-        summary=aggregate_summary,
-        results=parsed_results,
-        next_action=next_action_obj,
-    )
 
     return result.model_dump(exclude_none=True)

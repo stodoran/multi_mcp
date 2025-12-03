@@ -30,6 +30,26 @@ async def clear_conversation_store():
     _threads.clear()
 
 
+@pytest.fixture(autouse=True, scope="function")
+def integration_test_timeout(request, monkeypatch):
+    """Set shorter model timeout for integration tests.
+
+    Production default is 300s (5 min), but integration tests should fail fast.
+    Sets MODEL_TIMEOUT_SECONDS=120 for all integration tests.
+
+    This prevents tests from hanging when models take too long.
+    Increased from 60s to 120s to accommodate CLI subprocess overhead and slower models.
+    """
+    # Only apply to integration tests
+    if "integration" in str(request.fspath):
+        monkeypatch.setenv("MODEL_TIMEOUT_SECONDS", "120")
+
+        # Force settings reload to pick up the new timeout
+        from src.config import Settings
+
+        monkeypatch.setattr("src.config.settings", Settings())
+
+
 @pytest.fixture
 def test_data_dir():
     """Path to test data directory."""

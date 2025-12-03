@@ -42,7 +42,7 @@ skip_if_no_claude_cli = pytest.mark.skipif(
 
 
 @pytest.mark.asyncio
-@pytest.mark.timeout(30)
+@pytest.mark.timeout(150)
 @skip_if_no_gemini_cli
 async def test_gemini_cli_basic_execution():
     """Test basic Gemini CLI execution through litellm_client."""
@@ -67,7 +67,7 @@ async def test_gemini_cli_basic_execution():
 
 
 @pytest.mark.asyncio
-@pytest.mark.timeout(30)
+@pytest.mark.timeout(150)
 @skip_if_no_codex_cli
 async def test_codex_cli_basic_execution():
     """Test basic Codex CLI execution through litellm_client."""
@@ -92,7 +92,7 @@ async def test_codex_cli_basic_execution():
 
 
 @pytest.mark.asyncio
-@pytest.mark.timeout(30)
+@pytest.mark.timeout(150)
 @skip_if_no_claude_cli
 async def test_claude_cli_basic_execution():
     """Test basic Claude CLI execution through litellm_client."""
@@ -395,7 +395,7 @@ async def test_all_three_clis_in_compare():
 
 
 @pytest.mark.asyncio
-@pytest.mark.timeout(30)
+@pytest.mark.timeout(150)
 async def test_cli_model_invalid_command():
     """Test CLI model with non-existent command returns error."""
     from src.models.config import ModelConfig, get_models_config
@@ -428,7 +428,7 @@ async def test_cli_model_invalid_command():
 
 
 @pytest.mark.asyncio
-@pytest.mark.timeout(30)
+@pytest.mark.timeout(150)
 @skip_if_no_gemini_cli
 async def test_gemini_cli_with_alias():
     """Test Gemini CLI can be called via alias."""
@@ -452,7 +452,7 @@ async def test_gemini_cli_with_alias():
 
 
 @pytest.mark.asyncio
-@pytest.mark.timeout(30)
+@pytest.mark.timeout(150)
 @skip_if_no_codex_cli
 async def test_codex_cli_with_alias():
     """Test Codex CLI can be called via alias."""
@@ -476,7 +476,7 @@ async def test_codex_cli_with_alias():
 
 
 @pytest.mark.asyncio
-@pytest.mark.timeout(30)
+@pytest.mark.timeout(150)
 @skip_if_no_claude_cli
 async def test_claude_cli_with_alias():
     """Test Claude CLI can be called via alias."""

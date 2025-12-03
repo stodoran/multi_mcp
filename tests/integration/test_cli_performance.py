@@ -15,7 +15,7 @@ class TestCLIPerformance:
     """Test CLI execution performance."""
 
     @pytest.mark.integration
-    @pytest.mark.timeout(45)
+    @pytest.mark.timeout(150)
     async def test_cli_execution_completes_within_reasonable_time(self, skip_if_no_any_cli, has_gemini_cli):
         """CLI execution completes within reasonable time."""
         if not has_gemini_cli:
@@ -60,7 +60,7 @@ class TestCLIConcurrency:
     """Test concurrent CLI execution."""
 
     @pytest.mark.integration
-    @pytest.mark.timeout(90)
+    @pytest.mark.timeout(180)
     async def test_concurrent_cli_calls_same_model(self, skip_if_no_any_cli, has_gemini_cli):
         """Multiple CLI calls can run concurrently on same model."""
         if not has_gemini_cli:

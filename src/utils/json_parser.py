@@ -24,6 +24,8 @@ _UNQUOTED_KEY_RE = re.compile(r"(?P<prefix>[{\[,]\s*)(?P<key>[A-Za-z_][A-Za-z0-9
 
 _TRAILING_COMMA_RE = re.compile(r",\s*([}\]])")
 
+_STRING_RE = re.compile(r'"(?:[^"\\]|\\.)*"')
+
 _SMART_QUOTES = {
     "\u201c": '"',
     "\u201d": '"',
@@ -37,9 +39,34 @@ _SMART_QUOTES = {
 
 
 def _strip_code_fences(s: str) -> str:
-    """Strip markdown code fences from string."""
+    """Strip markdown code fences from string.
+
+    Handles both complete fences (```json ... ```) and unclosed fences
+    where the LLM was cut off mid-response (```json ...).
+
+    IMPORTANT: Uses greedy matching to handle nested code fences inside JSON strings.
+    For example, if the JSON contains a "fix" field with code snippets that have their
+    own ```python ... ``` fences, we want to match the OUTERMOST fences, not the first
+    closing ``` we encounter.
+    """
+    # Use greedy matching (.*?) to get content between outermost fences
+    # This handles nested code fences inside JSON strings
+    greedy_pattern = re.compile(r"```(?:json|JSON)?\s*([\s\S]*)\s*```\s*$", re.IGNORECASE)
+    m = greedy_pattern.search(s)
+    if m:
+        return m.group(1)
+
+    # Fallback: try non-greedy if greedy didn't work
     m = _CODE_FENCE_RE.search(s)
-    return m.group(1) if m else s
+    if m:
+        return m.group(1)
+
+    # Check for unclosed fence (opening ``` but no closing ```)
+    unclosed_match = re.search(r"```(?:json|JSON)?\s*([\s\S]+)", s, re.IGNORECASE)
+    if unclosed_match:
+        return unclosed_match.group(1)
+
+    return s
 
 
 def _strip_analysis_blocks(s: str) -> str:
@@ -56,6 +83,101 @@ def _normalize_quotes(s: str) -> str:
     """Replace smart quotes with standard quotes."""
     for k, v in _SMART_QUOTES.items():
         s = s.replace(k, v)
+    return s
+
+
+def _convert_single_to_double_quotes(s: str) -> str:
+    """Convert single-quoted strings to double-quoted strings.
+
+    JSON requires double quotes for strings. This handles LLM responses
+    that use single quotes instead.
+
+    Approach:
+    - Find single-quoted strings (handling escaped quotes inside)
+    - Replace outer single quotes with double quotes
+    - Escape any unescaped double quotes inside the string
+    """
+    result = []
+    i = 0
+    length = len(s)
+
+    while i < length:
+        # Check if we're at the start of a single-quoted string
+        if s[i] == "'":
+            # Collect the string content
+            string_start = i
+            i += 1
+            string_content = []
+            escaped = False
+
+            while i < length:
+                if escaped:
+                    # After escape, add the char literally
+                    string_content.append(s[i])
+                    escaped = False
+                elif s[i] == "\\":
+                    # Escape sequence - keep the backslash
+                    string_content.append("\\")
+                    escaped = True
+                elif s[i] == "'":
+                    # End of single-quoted string
+                    # Escape any unescaped double quotes in the content
+                    content_str = "".join(string_content)
+                    # Replace unescaped " with \"
+                    content_str = content_str.replace('"', '\\"')
+                    # Build double-quoted string
+                    result.append('"' + content_str + '"')
+                    i += 1
+                    break
+                else:
+                    string_content.append(s[i])
+                i += 1
+            else:
+                # Unclosed single quote - just keep original
+                result.append(s[string_start:i])
+        else:
+            result.append(s[i])
+            i += 1
+
+    return "".join(result)
+
+
+def _mask_strings(s: str) -> tuple[str, dict[str, str]]:
+    """Mask string literals with placeholders to protect during repairs.
+
+    This prevents regex-based repairs from corrupting content inside JSON strings.
+    For example, URLs with '//' won't be treated as comments, and literal words
+    like 'None' won't be replaced with 'null'.
+
+    Returns:
+        tuple of (masked_string, placeholder_map)
+    """
+    strings = {}
+    counter = 0
+
+    def replace_string(match):
+        nonlocal counter
+        placeholder = f"@STR_{counter}@"
+        strings[placeholder] = match.group(0)
+        counter += 1
+        return placeholder
+
+    masked = _STRING_RE.sub(replace_string, s)
+    return masked, strings
+
+
+def _unmask_strings(s: str, strings: dict[str, str]) -> str:
+    """Restore masked string literals.
+
+    Args:
+        s: String with placeholders
+        strings: Map of placeholders to original strings
+
+    Returns:
+        String with original string literals restored
+    """
+    for placeholder, original in strings.items():
+        s = s.replace(placeholder, original)
     return s
 
 
@@ -105,27 +227,54 @@ def _repair_json(s: str) -> str:
     Handles:
     - Comments
     - Smart quotes
+    - Single-quoted strings
     - Python/JavaScript literals
     - Unquoted keys
     - Trailing commas
+    - Invalid escape sequences
+
+    Uses string masking to protect string literal content from corruption
+    during regex-based repairs.
     """
+    # Basic cleanup
     s = s.strip()
     s = s.lstrip("\ufeff")
-    s = _strip_comments(s)
+
+    # Normalize smart quotes before masking (safe to run on everything)
     s = _normalize_quotes(s)
 
-    # Convert Python/JS literals to JSON
-    s = re.sub(r"\bNone\b", "null", s)
-    s = re.sub(r"\bTrue\b", "true", s)
-    s = re.sub(r"\bFalse\b", "false", s)
-    s = re.sub(r"\bundefined\b", "null", s)
-    s = re.sub(r"\bNaN\b", "null", s)
-    s = re.sub(r"\bInfinity\b", "1e9999", s)
-    s = re.sub(r"\b-Infinity\b", "-1e9999", s)
+    # Convert single-quoted strings to double-quoted strings
+    s = _convert_single_to_double_quotes(s)
 
-    # Fix unquoted keys and trailing commas
-    s = re.sub(_UNQUOTED_KEY_RE, r'\g<prefix>"\g<key>"\g<suffix>', s)
-    s = re.sub(_TRAILING_COMMA_RE, r"\1", s)
+    # Mask string literals to protect their content during repairs
+    masked, string_map = _mask_strings(s)
+
+    # Apply repairs on masked content (won't corrupt string internals)
+    masked = _strip_comments(masked)
+
+    # Convert Python/JS literals to JSON (only outside strings)
+    masked = re.sub(r"\bNone\b", "null", masked)
+    masked = re.sub(r"\bTrue\b", "true", masked)
+    masked = re.sub(r"\bFalse\b", "false", masked)
+    masked = re.sub(r"\bundefined\b", "null", masked)
+    masked = re.sub(r"\bNaN\b", "null", masked)
+    masked = re.sub(r"\bInfinity\b", "1e9999", masked)
+    masked = re.sub(r"\b-Infinity\b", "-1e9999", masked)
+
+    # Fix unquoted keys and trailing commas (structural repairs)
+    masked = re.sub(_UNQUOTED_KEY_RE, r'\g<prefix>"\g<key>"\g<suffix>', masked)
+    masked = re.sub(_TRAILING_COMMA_RE, r"\1", masked)
+
+    # Restore original string literals
+    s = _unmask_strings(masked, string_map)
+
+    # Fix invalid escape sequences (including inside strings)
+    # JSON only allows: \" \\ \/ \b \f \n \r \t \uXXXX
+    # Replace \' with ' (single quotes don't need escaping in JSON)
+    s = s.replace("\\'", "'")
+    # Replace other invalid escapes by removing the backslash
+    # Match backslash followed by any char that's NOT a valid escape
+    s = re.sub(r'\\([^"\\\/bfnrtu])', r"\1", s)
 
     return s
 

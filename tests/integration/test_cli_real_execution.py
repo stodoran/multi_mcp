@@ -12,7 +12,7 @@ class TestGeminiCLIRealExecution:
     """Test real Gemini CLI execution."""
 
     @pytest.mark.integration
-    @pytest.mark.timeout(30)
+    @pytest.mark.timeout(150)
     async def test_gemini_cli_basic_execution(self, skip_if_no_gemini_cli):
         """Gemini CLI executes successfully with real API call."""
         client = LiteLLMClient()
@@ -33,7 +33,7 @@ class TestCodexCLIRealExecution:
     """Test real Codex CLI execution."""
 
     @pytest.mark.integration
-    @pytest.mark.timeout(30)
+    @pytest.mark.timeout(150)
     async def test_codex_cli_basic_execution(self, skip_if_no_codex_cli):
         """Codex CLI executes successfully with real API call."""
         client = LiteLLMClient()
@@ -53,7 +53,7 @@ class TestClaudeCLIRealExecution:
     """Test real Claude CLI execution."""
 
     @pytest.mark.integration
-    @pytest.mark.timeout(30)
+    @pytest.mark.timeout(150)
     async def test_claude_cli_basic_execution(self, skip_if_no_claude_cli):
         """Claude CLI executes successfully with real API call."""
         client = LiteLLMClient()

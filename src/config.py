@@ -110,6 +110,13 @@ class Settings(BaseSettings):
     )
     max_file_size_kb: int = Field(default=50, alias="MAX_FILE_SIZE_KB", description="Maximum file size in KB for reading and processing")
 
+    # Code review response size limits
+    max_codereview_response_size: int = Field(
+        default=60000,
+        alias="MAX_CODEREVIEW_RESPONSE_SIZE",
+        description="Maximum response size in bytes before consolidation (make another LLM call to consolidate results). Set high (e.g., 999999) to disable consolidation.",
+    )
+
     # Artifact logging
     artifacts_dir: str = Field(
         default="",

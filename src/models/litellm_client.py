@@ -85,9 +85,11 @@ class LiteLLMClient:
                 "timeout": timeout,
             }
 
-            if model_config.max_tokens is not None:
-                kwargs["max_tokens"] = model_config.max_tokens
-                logger.debug(f"[MODEL_CALL] Using max_tokens={model_config.max_tokens} from config")
+            # Set max_tokens: config value > sensible default (32768)
+            # Default 32k allows for very long code review responses with many issues and detailed fixes
+            max_tokens = model_config.max_tokens if model_config.max_tokens is not None else 32768
+            kwargs["max_tokens"] = max_tokens
+            logger.debug(f"[MODEL_CALL] Using max_tokens={max_tokens} ({'config' if model_config.max_tokens else 'default'})")
 
             logger.debug(f"[MODEL_REQUEST] litellm_model={litellm_model} num_messages={len(messages)}")
 

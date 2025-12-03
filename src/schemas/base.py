@@ -19,6 +19,22 @@ class ModelResponseMetadata(BaseModel):
         default=None,
         description="Absolute paths to saved artifact files (markdown, JSON, etc.) if artifacts are enabled",
     )
+    source_models: list[str] | None = Field(
+        default=None,
+        description=(
+            "List of source model names that contributed to consolidated result. "
+            "Only populated for consolidated responses from consolidate_model_results(). "
+            "Regular single-model or multi-model responses leave this as None."
+        ),
+    )
+    consolidation_model: str | None = Field(
+        default=None,
+        description=(
+            "Model used to perform consolidation (e.g., 'gpt-5-mini'). "
+            "Only populated for consolidated responses from consolidate_model_results(). "
+            "None indicates no consolidation was performed."
+        ),
+    )
 
     @classmethod
     def error_metadata(cls, model: str = "unknown", latency_ms: int = 0) -> "ModelResponseMetadata":

@@ -211,12 +211,16 @@ class TestLiteLLMClient:
     @pytest.mark.asyncio
     async def test_call_async_includes_model_params(self, sample_config, mock_llm_response):
         """Test that model-specific params are included in LLM call."""
-        # Create config with custom params
+        # Create config with custom params and explicit max_tokens
         config = ModelsConfiguration(
             version="1.0",
             default_model="custom-model",
             models={
-                "custom-model": ModelConfig(litellm_model="provider/custom-model", params={"top_p": 0.9, "max_tokens": 2000}),
+                "custom-model": ModelConfig(
+                    litellm_model="provider/custom-model",
+                    max_tokens=2000,  # Use explicit max_tokens field, not params
+                    params={"top_p": 0.9},
+                ),
             },
         )
         resolver = ModelResolver(config=config)
@@ -233,6 +237,24 @@ class TestLiteLLMClient:
             call_kwargs = mock_completion.call_args[1]
             assert call_kwargs["top_p"] == 0.9
             assert call_kwargs["max_tokens"] == 2000
+
+    @pytest.mark.asyncio
+    async def test_call_async_uses_default_max_tokens(self, sample_config, mock_llm_response):
+        """Test that default max_tokens (32768) is used when not configured."""
+        # Use sample_config which doesn't have max_tokens set
+        resolver = ModelResolver(config=sample_config)
+        client = LiteLLMClient(resolver=resolver)
+
+        with (
+            patch("src.models.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock_completion,
+            patch("src.models.litellm_client.log_llm_interaction"),
+        ):
+            mock_completion.return_value = mock_llm_response
+
+            await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="gpt-5-mini")
+
+            call_kwargs = mock_completion.call_args[1]
+            assert call_kwargs["max_tokens"] == 32768  # Default value
 
     def test_lazy_resolver_loading(self):
         """Test that resolver is lazy-loaded."""
