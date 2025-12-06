@@ -70,7 +70,7 @@ def process_data(user_input):
 
 
 @pytest.mark.asyncio
-@pytest.mark.timeout(120)
+@pytest.mark.timeout(300)  # 5 minutes for API calls
 async def test_model_alias_resolution(tmp_path):
     """Test that model aliases resolve correctly in E2E flow."""
     from src.tools.chat import chat_impl

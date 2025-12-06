@@ -165,7 +165,7 @@ class TestDebateWithCLI:
     """Test debate tool with CLI models."""
 
     @pytest.mark.integration
-    @pytest.mark.timeout(120)
+    @pytest.mark.timeout(300)  # 5 minutes for CLI models
     async def test_debate_with_cli_models(self, temp_project_dir, has_gemini_cli, has_codex_cli, integration_test_model):
         """Debate workflow works with CLI models."""
         # Need at least one CLI for this test

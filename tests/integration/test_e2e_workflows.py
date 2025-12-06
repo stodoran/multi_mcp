@@ -201,7 +201,7 @@ def subtract(a, b):
 
 @pytest.mark.vcr
 @pytest.mark.asyncio
-@pytest.mark.timeout(180)
+@pytest.mark.timeout(300)  # 5 minutes for multi-model compare
 async def test_compare_continuation(compare_models, tmp_path):
     """Test continuing a compare with follow-up questions."""
     from src.tools.compare import compare_impl
