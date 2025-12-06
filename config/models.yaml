@@ -20,20 +20,23 @@ models:
 
   gpt-5-mini:
     litellm_model: openai/gpt-5-mini
+    provider_web_search: true  # Native web search support (per OpenAI docs)
     aliases:
       - mini
     constraints:
       temperature: 1.0  # gpt-5 family only supports 1.0
-    notes: "Fast, cost-effective"
+    notes: "Fast, cost-effective with web search"
+    # disabled: true  # Uncomment this line to disable this model (it won't appear in /multi:models)
 
   gpt-5.1:
     litellm_model: openai/gpt-5.1
+    provider_web_search: true  # Native web search support (per OpenAI docs)
     aliases:
       - gpt-5
       - gpt
     constraints:
       temperature: 1.0
-    notes: "Strong general-purpose model, temperature=1.0 only"
+    notes: "Strong general-purpose model with web search, temperature=1.0 only"
 
   gpt-5.1-codex-mini:
     litellm_model: openai/gpt-5.1-codex-mini
@@ -79,7 +82,7 @@ models:
     litellm_model: anthropic/claude-sonnet-4-5-20250929
     aliases:
       - sonnet
-    notes: "Great for reasoning and analysis"
+    notes: "Great for reasoning and analysis with native web search ($10/1k searches)"
 
   claude-opus-4.5:
     litellm_model: anthropic/claude-opus-4-5-20251101
@@ -93,25 +96,28 @@ models:
 
   gemini-2.5-pro:
     litellm_model: gemini/gemini-2.5-pro
+    provider_web_search: true  # LiteLLM handles web search automatically
     aliases:
       - gemini-2.5
       - gemini-2
-    notes: "High-quality Google model"
+    notes: "High-quality Google model with grounding ($14/1k searches)"
 
   gemini-2.5-flash:
     litellm_model: gemini/gemini-2.5-flash
+    provider_web_search: true  # LiteLLM handles web search automatically
     aliases:
       - gemini-flash
       - flash
-    notes: "Fast and cheap"
+    notes: "Fast and cheap with grounding ($14/1k searches)"
 
   gemini-3-pro-preview:
     litellm_model: gemini/gemini-3-pro-preview
+    provider_web_search: true  # LiteLLM handles web search automatically
     aliases:
       - gemini-3-pro
       - gemini-3
       - gemini
-    notes: "Latest Google model"
+    notes: "Latest Google model with grounding ($14/1k searches)"
 
   # ============================================
   # CLI Models

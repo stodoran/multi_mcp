@@ -36,6 +36,7 @@ async def compare_impl(
     results: list[ModelResponse] = await execute_parallel(
         models=models,
         messages=messages,
+        enable_web_search=True,
     )
 
     # Build response

@@ -19,7 +19,7 @@ async def test_execute_parallel_all_success():
     call_count = [0]
     models_used = []
 
-    async def mock_call_async(messages: list[dict], model: str | None = None):
+    async def mock_call_async(messages: list[dict], model: str | None = None, enable_web_search: bool = False):
         call_count[0] += 1
         models_used.append(model)
         return ModelResponse(
@@ -54,7 +54,7 @@ async def test_execute_parallel_partial_failure():
 
     call_count = [0]
 
-    async def mock_call_async(messages: list[dict], model: str | None = None):
+    async def mock_call_async(messages: list[dict], model: str | None = None, enable_web_search: bool = False):
         call_count[0] += 1
 
         if call_count[0] == 1:
@@ -86,7 +86,7 @@ async def test_execute_parallel_uses_provided_messages():
 
     received_messages = []
 
-    async def mock_call_async(messages: list[dict], model: str | None = None):
+    async def mock_call_async(messages: list[dict], model: str | None = None, enable_web_search: bool = False):
         # Capture messages for verification
         received_messages.append(messages)
         return ModelResponse(content="Response", status="success", metadata=ModelResponseMetadata(model=model, total_tokens=100))

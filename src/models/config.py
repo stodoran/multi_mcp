@@ -104,9 +104,16 @@ class ModelConfig(BaseModel):
     cli_env: dict[str, str] = Field(default_factory=dict)
     cli_parser: str = "json"  # "json", "jsonl", or "text"
 
+    # Web search support
+    provider_web_search: bool = Field(default=False, description="Whether this model supports provider-native web search via LiteLLM")
+
     def is_cli_model(self) -> bool:
         """Check if this is a CLI model."""
         return self.provider == "cli"
+
+    def has_provider_web_search(self) -> bool:
+        """Check if model supports provider-native web search."""
+        return self.provider_web_search is True
 
     def get_provider(self) -> str:
         """Get provider (explicit > prefix > litellm lookup > unknown)."""

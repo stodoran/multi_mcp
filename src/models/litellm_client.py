@@ -22,6 +22,46 @@ logger = logging.getLogger(__name__)
 litellm.drop_params = True
 
 
+def _extract_content_from_responses_api(response) -> str:
+    """Extract text from responses API output array.
+
+    Handles both OpenAI/Azure ([reasoning/web_search_call, message]) and Anthropic/Gemini ([message]).
+    Supports both object and dict formats (LiteLLM's responses API can return either depending on provider).
+    """
+    # Check if response has output array
+    if not hasattr(response, "output") or not response.output:
+        logger.warning("[RESPONSE_PARSE] Response has no output or empty output array")
+        return ""
+
+    for item in response.output:
+        # LiteLLM's responses API can return items as dicts or objects depending on provider/version
+        # Handle both formats for 'type' and 'content' extraction
+        item_type = item.get("type") if isinstance(item, dict) else getattr(item, "type", None)
+
+        if item_type == "message":
+            # Extract content (supports both dict and object formats)
+            content = item.get("content") if isinstance(item, dict) else getattr(item, "content", None)
+
+            # Handle None content
+            if content is None:
+                logger.debug("[RESPONSE_PARSE] Message item has None content, skipping")
+                continue
+
+            # Handle content as list of text items
+            if isinstance(content, list):
+                return "".join(c.get("text", "") if isinstance(c, dict) else getattr(c, "text", "") for c in content if c)
+            # Handle content as string (fallback)
+            elif isinstance(content, str):
+                return content
+            else:
+                # Unexpected content type
+                logger.debug(f"[RESPONSE_PARSE] Unexpected content type '{type(content).__name__}' in message item")
+
+    # No message item found in output
+    logger.warning("[RESPONSE_PARSE] No message item found in response.output, returning empty string")
+    return ""
+
+
 class LiteLLMClient:
     """Wrapper for LiteLLM model calls with config-based resolution."""
 
@@ -90,12 +130,14 @@ class LiteLLMClient:
         self,
         messages: list[dict],
         model: str | None = None,
+        enable_web_search: bool = False,
     ) -> ModelResponse:
         """Call LiteLLM with config-based model resolution and return ModelResponse.
 
         Args:
             messages: List of message dicts with role and content
             model: Model name or alias (uses default if not specified)
+            enable_web_search: Enable provider-native web search if supported
 
         Returns:
             ModelResponse with status, content, metadata, error
@@ -143,7 +185,7 @@ class LiteLLMClient:
             kwargs: dict[str, Any] = {
                 **model_config.params,
                 "model": litellm_model,
-                "messages": messages,
+                "input": messages,
                 "temperature": temp,
                 "num_retries": settings.max_retries,
                 "timeout": timeout,
@@ -155,23 +197,33 @@ class LiteLLMClient:
             kwargs["max_tokens"] = max_tokens
             logger.debug(f"[MODEL_CALL] Using max_tokens={max_tokens} ({'config' if model_config.max_tokens else 'default'})")
 
+            # Enable provider-native web search if requested and supported
+            if enable_web_search and model_config.has_provider_web_search():
+                kwargs["tools"] = [{"type": "web_search"}]
+                logger.info(f"[WEB_SEARCH] Enabled for model: {canonical_name}")
+
             logger.debug(f"[MODEL_REQUEST] litellm_model={litellm_model} num_messages={len(messages)}")
 
             # Call LiteLLM with timeout protection
             start_time = time.perf_counter()
             response = await asyncio.wait_for(
-                litellm.acompletion(**kwargs),
+                litellm.aresponses(**kwargs),
                 timeout=timeout,
             )
             latency_ms = int((time.perf_counter() - start_time) * 1000)
 
-            content = response.choices[0].message.content or ""  # type: ignore[attr-defined]
+            content = _extract_content_from_responses_api(response)
+
+            # Extract usage stats (responses API only provides total_tokens)
+            total_tokens = 0
+            if hasattr(response, "usage") and response.usage:  # type: ignore[attr-defined]
+                total_tokens = getattr(response.usage, "total_tokens", 0)  # type: ignore[attr-defined]
 
             metadata = ModelResponseMetadata(
                 model=canonical_name,
-                prompt_tokens=response.usage.prompt_tokens,  # type: ignore[attr-defined]
-                completion_tokens=response.usage.completion_tokens,  # type: ignore[attr-defined]
-                total_tokens=response.usage.total_tokens,  # type: ignore[attr-defined]
+                prompt_tokens=0,  # Not available in responses API
+                completion_tokens=0,  # Not available in responses API
+                total_tokens=total_tokens,
                 latency_ms=latency_ms,
             )
             response = ModelResponse(

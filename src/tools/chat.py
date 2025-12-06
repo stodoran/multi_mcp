@@ -44,6 +44,7 @@ async def chat_impl(
     model_response = await execute_single(
         model=model,
         messages=messages,
+        enable_web_search=True,
     )
 
     # Handle response

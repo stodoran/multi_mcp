@@ -12,11 +12,13 @@ logger = logging.getLogger(__name__)
 async def execute_single(
     model: str,
     messages: list[dict],
+    enable_web_search: bool = False,
 ) -> ModelResponse:
     """Execute single-model LLM call with automatic artifact saving.
     Args:
         model: Model name to use
         messages: Pre-built messages array
+        enable_web_search: Enable provider-native web search if supported
 
     Returns:
         ModelResponse with artifacts in metadata if saving succeeded
@@ -26,6 +28,7 @@ async def execute_single(
     response = await litellm_client.call_async(
         messages=messages,
         model=model,
+        enable_web_search=enable_web_search,
     )
 
     if response.status == "success":
@@ -41,6 +44,7 @@ async def execute_parallel(
     models: list[str],
     messages: list[dict],
     max_concurrency: int = 5,
+    enable_web_search: bool = False,
 ) -> list[ModelResponse]:
     """
     Execute messages against multiple models in parallel.
@@ -49,6 +53,7 @@ async def execute_parallel(
         models: List of model names
         messages: Pre-built messages array (same for all models)
         max_concurrency: Max concurrent calls (default: 5)
+        enable_web_search: Enable provider-native web search if supported
 
     Note:
         All artifact metadata (workflow, name, step_number, thread_id, base_path)
@@ -67,6 +72,7 @@ async def execute_parallel(
             response = await litellm_client.call_async(
                 messages=messages,
                 model=model_name,
+                enable_web_search=enable_web_search,
             )
 
             if response.status == "success":

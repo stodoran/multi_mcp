@@ -39,23 +39,31 @@ class TestLiteLLMClient:
 
     @pytest.fixture
     def mock_llm_response(self):
-        """Create mock LiteLLM response."""
+        """Create mock LiteLLM responses API response."""
         mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Test response"
-        mock_response.choices[0].finish_reason = "stop"
+
+        # Responses API format
+        mock_message = MagicMock()
+        mock_message.type = "message"
+        mock_message.role = "assistant"
+
+        mock_content_item = MagicMock()
+        mock_content_item.text = "Test response"
+        mock_message.content = [mock_content_item]
+
+        mock_response.output = [mock_message]
+
+        # Usage stats (only total_tokens available in responses API)
         mock_response.usage = MagicMock()
-        mock_response.usage.prompt_tokens = 100
-        mock_response.usage.completion_tokens = 50
         mock_response.usage.total_tokens = 150
-        mock_response.model = "openai/gpt-5-mini"
+
         return mock_response
 
     @pytest.mark.asyncio
     async def test_call_async_success(self, client, mock_llm_response):
         """Test successful LLM call."""
         with (
-            patch("src.models.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock_completion,
+            patch("src.models.litellm_client.litellm.aresponses", new_callable=AsyncMock) as mock_completion,
             patch("src.models.litellm_client.log_llm_interaction"),
             patch.object(client, "_validate_provider_credentials", return_value=None),
         ):
@@ -68,8 +76,8 @@ class TestLiteLLMClient:
             assert result.content == "Test response"
             assert result.metadata.model == "gpt-5-mini"
             assert result.metadata.total_tokens == 150
-            assert result.metadata.prompt_tokens == 100
-            assert result.metadata.completion_tokens == 50
+            assert result.metadata.prompt_tokens == 0  # Not available in responses API
+            assert result.metadata.completion_tokens == 0  # Not available in responses API
             assert result.metadata.latency_ms >= 0
             mock_completion.assert_called_once()
 
@@ -77,7 +85,7 @@ class TestLiteLLMClient:
     async def test_call_async_with_model_resolution(self, client, mock_llm_response):
         """Test that model aliases are resolved correctly."""
         with (
-            patch("src.models.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock_completion,
+            patch("src.models.litellm_client.litellm.aresponses", new_callable=AsyncMock) as mock_completion,
             patch("src.models.litellm_client.log_llm_interaction"),
             patch.object(client, "_validate_provider_credentials", return_value=None),
         ):
@@ -97,7 +105,7 @@ class TestLiteLLMClient:
     async def test_call_async_uses_default_model_when_none_specified(self, client, mock_llm_response):
         """Test that default model is used when no model specified."""
         with (
-            patch("src.models.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock_completion,
+            patch("src.models.litellm_client.litellm.aresponses", new_callable=AsyncMock) as mock_completion,
             patch("src.models.litellm_client.log_llm_interaction"),
             patch.object(client, "_validate_provider_credentials", return_value=None),
         ):
@@ -113,7 +121,7 @@ class TestLiteLLMClient:
     async def test_call_async_temperature_uses_default(self, client, mock_llm_response):
         """Test that default temperature is used when no constraint."""
         with (
-            patch("src.models.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock_completion,
+            patch("src.models.litellm_client.litellm.aresponses", new_callable=AsyncMock) as mock_completion,
             patch("src.models.litellm_client.log_llm_interaction"),
             patch.object(client, "_validate_provider_credentials", return_value=None),
         ):
@@ -129,7 +137,7 @@ class TestLiteLLMClient:
     async def test_call_async_temperature_constraint_enforced(self, client, mock_llm_response):
         """Test that model temperature constraints override default temperature."""
         with (
-            patch("src.models.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock_completion,
+            patch("src.models.litellm_client.litellm.aresponses", new_callable=AsyncMock) as mock_completion,
             patch("src.models.litellm_client.log_llm_interaction"),
             patch.object(client, "_validate_provider_credentials", return_value=None),
         ):
@@ -145,7 +153,7 @@ class TestLiteLLMClient:
     async def test_call_async_logging(self, client, mock_llm_response):
         """Test that LLM interactions are logged."""
         with (
-            patch("src.models.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock_completion,
+            patch("src.models.litellm_client.litellm.aresponses", new_callable=AsyncMock) as mock_completion,
             patch("src.models.litellm_client.log_llm_interaction") as mock_log,
             patch.object(client, "_validate_provider_credentials", return_value=None),
         ):
@@ -157,7 +165,7 @@ class TestLiteLLMClient:
             call_args = mock_log.call_args[1]
             # Request data now contains the kwargs passed to litellm
             assert call_args["request_data"]["model"] == "openai/gpt-5-mini"
-            assert call_args["request_data"]["messages"] == [{"role": "user", "content": "Hello"}]
+            assert call_args["request_data"]["input"] == [{"role": "user", "content": "Hello"}]  # Changed from "messages" to "input"
             # Response data is the ModelResponse dumped to dict
             assert call_args["response_data"]["content"] == "Test response"
             assert call_args["response_data"]["status"] == "success"
@@ -166,7 +174,7 @@ class TestLiteLLMClient:
     async def test_call_async_api_error_handling(self, client):
         """Test that API errors return error response."""
         with (
-            patch("src.models.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock_completion,
+            patch("src.models.litellm_client.litellm.aresponses", new_callable=AsyncMock) as mock_completion,
             patch("src.models.litellm_client.log_llm_interaction"),
             patch.object(client, "_validate_provider_credentials", return_value=None),
         ):
@@ -183,7 +191,7 @@ class TestLiteLLMClient:
     async def test_call_async_timeout_handling(self, client):
         """Test that timeout errors return error response."""
         with (
-            patch("src.models.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock_completion,
+            patch("src.models.litellm_client.litellm.aresponses", new_callable=AsyncMock) as mock_completion,
             patch("src.models.litellm_client.log_llm_interaction"),
             patch.object(client, "_validate_provider_credentials", return_value=None),
         ):
@@ -198,14 +206,14 @@ class TestLiteLLMClient:
 
     @pytest.mark.asyncio
     async def test_call_async_messages_parameter(self, client, mock_llm_response):
-        """Test that messages are passed correctly to LiteLLM."""
+        """Test that messages are passed correctly to LiteLLM as 'input'."""
         messages = [
             {"role": "system", "content": "You are a helpful assistant"},
             {"role": "user", "content": "Hello"},
         ]
 
         with (
-            patch("src.models.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock_completion,
+            patch("src.models.litellm_client.litellm.aresponses", new_callable=AsyncMock) as mock_completion,
             patch("src.models.litellm_client.log_llm_interaction"),
             patch.object(client, "_validate_provider_credentials", return_value=None),
         ):
@@ -214,8 +222,8 @@ class TestLiteLLMClient:
             await client.call_async(messages=messages, model="gpt-5-mini")
 
             call_kwargs = mock_completion.call_args[1]
-            assert call_kwargs["messages"] == messages
-            assert len(call_kwargs["messages"]) == 2
+            assert call_kwargs["input"] == messages  # Changed from "messages" to "input"
+            assert len(call_kwargs["input"]) == 2
 
     @pytest.mark.asyncio
     async def test_call_async_includes_model_params(self, sample_config, mock_llm_response):
@@ -236,7 +244,7 @@ class TestLiteLLMClient:
         client = LiteLLMClient(resolver=resolver)
 
         with (
-            patch("src.models.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock_completion,
+            patch("src.models.litellm_client.litellm.aresponses", new_callable=AsyncMock) as mock_completion,
             patch("src.models.litellm_client.log_llm_interaction"),
             patch.object(client, "_validate_provider_credentials", return_value=None),
         ):
@@ -256,7 +264,7 @@ class TestLiteLLMClient:
         client = LiteLLMClient(resolver=resolver)
 
         with (
-            patch("src.models.litellm_client.litellm.acompletion", new_callable=AsyncMock) as mock_completion,
+            patch("src.models.litellm_client.litellm.aresponses", new_callable=AsyncMock) as mock_completion,
             patch("src.models.litellm_client.log_llm_interaction"),
             patch.object(client, "_validate_provider_credentials", return_value=None),
         ):

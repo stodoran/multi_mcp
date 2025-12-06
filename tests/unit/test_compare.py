@@ -144,7 +144,7 @@ class TestCompareImpl:
     async def test_partial_failure(self):
         """Test compare with one model failing."""
 
-        async def mock_call(messages, model):
+        async def mock_call(messages, model, enable_web_search=False):
             if model == "model-a":
                 return mock_model_response(content="Success", model="model-a")
             else:

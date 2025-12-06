@@ -71,6 +71,7 @@ async def debate_impl(
     step1_results = await execute_parallel(
         models=models,
         messages=messages,
+        enable_web_search=True,
     )
 
     step1_successes = sum(1 for r in step1_results if r.status == "success")
@@ -105,6 +106,7 @@ async def debate_impl(
     step2_results = await execute_parallel(
         models=successful_models,
         messages=step2_messages,
+        enable_web_search=False,  # Disable web search for debate step 2 (uses step 1 results)
     )
 
     step2_successes = sum(1 for r in step2_results if r.status == "success")

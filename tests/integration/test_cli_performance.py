@@ -86,7 +86,8 @@ class TestCLIConcurrency:
 
     @pytest.mark.integration
     @pytest.mark.timeout(90)
-    async def test_concurrent_different_cli_models(self, temp_project_dir, has_gemini_cli, has_codex_cli, has_claude_cli):
+    @pytest.mark.xdist_group(name="claude_cli")
+    async def test_concurrent_different_cli_models(self, has_gemini_cli, has_codex_cli, has_claude_cli):
         """Different CLI models can run concurrently."""
         # Build list of available CLIs
         available_clis = []
@@ -108,8 +109,14 @@ class TestCLIConcurrency:
         results = await asyncio.gather(*tasks)
 
         # All should succeed
-        assert len(results) == 2
-        assert all(r.status == "success" for r in results)
+        assert len(results) == 2, f"Expected 2 results, got {len(results)}"
+
+        # Check each result individually for better error messages
+        for i, result in enumerate(results):
+            model = available_clis[i]
+            assert result.status == "success", (
+                f"CLI model '{model}' failed: {result.error if result.status == 'error' else 'unknown error'}"
+            )
 
     @pytest.mark.integration
     @pytest.mark.timeout(120)

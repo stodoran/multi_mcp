@@ -1,4 +1,12 @@
-"""End-to-end integration tests for CLI model execution."""
+"""End-to-end integration tests for CLI model execution in workflows.
+
+Basic CLI execution and alias tests have been moved to:
+- tests/unit/test_cli_parsing.py (mocked, fast)
+- tests/unit/test_cli_error_handling.py (mocked, fast)
+- tests/integration/test_cli_smoke.py (6 smoke tests with real CLIs)
+
+This file focuses on testing CLI models in actual tool workflows.
+"""
 
 import os
 import shutil
@@ -34,86 +42,6 @@ skip_if_no_claude_cli = pytest.mark.skipif(
     not is_cli_available("claude"),
     reason="claude CLI not found in PATH (install via anthropic)",
 )
-
-
-# ============================================================================
-# Basic CLI Execution Tests
-# ============================================================================
-
-
-@pytest.mark.asyncio
-@pytest.mark.timeout(150)
-@skip_if_no_gemini_cli
-async def test_gemini_cli_basic_execution():
-    """Test basic Gemini CLI execution through litellm_client."""
-    from src.models.litellm_client import litellm_client
-
-    messages = [{"role": "user", "content": "What is 2+2? Answer in one short sentence only."}]
-
-    response = await litellm_client.call_async(messages=messages, model="gemini-cli")
-
-    assert response.status == "success", f"Expected success, got {response.status}: {response.error}"
-    assert response.metadata.model == "gemini-cli"
-    assert response.metadata.latency_ms > 0
-    assert len(response.content) > 0
-
-    # Should mention 4
-    content = response.content.lower()
-    assert "4" in content or "four" in content, f"Expected answer to contain '4', got: {content}"
-
-    print("\n✓ Gemini CLI test passed")
-    print(f"✓ Latency: {response.metadata.latency_ms}ms")
-    print(f"✓ Response: {response.content[:100]}...")
-
-
-@pytest.mark.asyncio
-@pytest.mark.timeout(150)
-@skip_if_no_codex_cli
-async def test_codex_cli_basic_execution():
-    """Test basic Codex CLI execution through litellm_client."""
-    from src.models.litellm_client import litellm_client
-
-    messages = [{"role": "user", "content": "What is 3+3? Answer in one short sentence only."}]
-
-    response = await litellm_client.call_async(messages=messages, model="codex-cli")
-
-    assert response.status == "success", f"Expected success, got {response.status}: {response.error}"
-    assert response.metadata.model == "codex-cli"
-    assert response.metadata.latency_ms > 0
-    assert len(response.content) > 0
-
-    # Should mention 6
-    content = response.content.lower()
-    assert "6" in content or "six" in content, f"Expected answer to contain '6', got: {content}"
-
-    print("\n✓ Codex CLI test passed")
-    print(f"✓ Latency: {response.metadata.latency_ms}ms")
-    print(f"✓ Response: {response.content[:100]}...")
-
-
-@pytest.mark.asyncio
-@pytest.mark.timeout(150)
-@skip_if_no_claude_cli
-async def test_claude_cli_basic_execution():
-    """Test basic Claude CLI execution through litellm_client."""
-    from src.models.litellm_client import litellm_client
-
-    messages = [{"role": "user", "content": "What is 4+4? Answer in one short sentence only."}]
-
-    response = await litellm_client.call_async(messages=messages, model="claude-cli")
-
-    assert response.status == "success", f"Expected success, got {response.status}: {response.error}"
-    assert response.metadata.model == "claude-cli"
-    assert response.metadata.latency_ms > 0
-    assert len(response.content) > 0
-
-    # Should mention 8
-    content = response.content.lower()
-    assert "8" in content or "eight" in content, f"Expected answer to contain '8', got: {content}"
-
-    print("\n✓ Claude CLI test passed")
-    print(f"✓ Latency: {response.metadata.latency_ms}ms")
-    print(f"✓ Response: {response.content[:100]}...")
 
 
 # ============================================================================
@@ -425,75 +353,3 @@ async def test_cli_model_invalid_command():
 
     print("\n✓ CLI error handling test passed")
     print(f"✓ Error: {response.error[:100]}...")
-
-
-@pytest.mark.asyncio
-@pytest.mark.timeout(150)
-@skip_if_no_gemini_cli
-async def test_gemini_cli_with_alias():
-    """Test Gemini CLI can be called via alias."""
-    from src.models.litellm_client import litellm_client
-
-    messages = [{"role": "user", "content": "What is 1+1? Answer in one short sentence."}]
-
-    # Use alias 'gem-cli' instead of 'gemini-cli'
-    response = await litellm_client.call_async(messages=messages, model="gem-cli")
-
-    assert response.status == "success", f"Expected success, got {response.status}: {response.error}"
-    assert response.metadata.model == "gemini-cli"  # Should resolve to canonical name
-    assert len(response.content) > 0
-
-    # Should mention 2
-    content = response.content.lower()
-    assert "2" in content or "two" in content, f"Expected answer to contain '2', got: {content}"
-
-    print("\n✓ Gemini CLI alias test passed")
-    print(f"✓ Alias 'gem-cli' resolved to: {response.metadata.model}")
-
-
-@pytest.mark.asyncio
-@pytest.mark.timeout(150)
-@skip_if_no_codex_cli
-async def test_codex_cli_with_alias():
-    """Test Codex CLI can be called via alias."""
-    from src.models.litellm_client import litellm_client
-
-    messages = [{"role": "user", "content": "What is 5+3? Answer in one short sentence."}]
-
-    # Use alias 'cx-cli' instead of 'codex-cli'
-    response = await litellm_client.call_async(messages=messages, model="cx-cli")
-
-    assert response.status == "success", f"Expected success, got {response.status}: {response.error}"
-    assert response.metadata.model == "codex-cli"  # Should resolve to canonical name
-    assert len(response.content) > 0
-
-    # Should mention 8
-    content = response.content.lower()
-    assert "8" in content or "eight" in content, f"Expected answer to contain '8', got: {content}"
-
-    print("\n✓ Codex CLI alias test passed")
-    print(f"✓ Alias 'cx-cli' resolved to: {response.metadata.model}")
-
-
-@pytest.mark.asyncio
-@pytest.mark.timeout(150)
-@skip_if_no_claude_cli
-async def test_claude_cli_with_alias():
-    """Test Claude CLI can be called via alias."""
-    from src.models.litellm_client import litellm_client
-
-    messages = [{"role": "user", "content": "What is 6+2? Answer in one short sentence."}]
-
-    # Use alias 'cl-cli' instead of 'claude-cli'
-    response = await litellm_client.call_async(messages=messages, model="cl-cli")
-
-    assert response.status == "success", f"Expected success, got {response.status}: {response.error}"
-    assert response.metadata.model == "claude-cli"  # Should resolve to canonical name
-    assert len(response.content) > 0
-
-    # Should mention 8
-    content = response.content.lower()
-    assert "8" in content or "eight" in content, f"Expected answer to contain '8', got: {content}"
-
-    print("\n✓ Claude CLI alias test passed")
-    print(f"✓ Alias 'cl-cli' resolved to: {response.metadata.model}")
