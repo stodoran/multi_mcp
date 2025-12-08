@@ -15,17 +15,19 @@ async def test_execute_parallel_all_success():
     # Set context for testing
     set_request_context(thread_id="test-thread")
 
-    # Mock litellm_client.call_async
+    # Mock litellm_client.execute
     call_count = [0]
     models_used = []
 
-    async def mock_call_async(messages: list[dict], model: str | None = None, enable_web_search: bool = False):
+    async def mock_call_async(canonical_name: str, model_config, messages: list[dict], enable_web_search: bool = False):
         call_count[0] += 1
-        models_used.append(model)
+        models_used.append(canonical_name)
         return ModelResponse(
-            content=f"Response from {model}",
+            content=f"Response from {canonical_name}",
             status="success",
-            metadata=ModelResponseMetadata(model=model, prompt_tokens=100, completion_tokens=200, total_tokens=300, latency_ms=1000),
+            metadata=ModelResponseMetadata(
+                model=canonical_name, prompt_tokens=100, completion_tokens=200, total_tokens=300, latency_ms=1000
+            ),
         )
 
     messages = [
@@ -33,7 +35,7 @@ async def test_execute_parallel_all_success():
         {"role": "user", "content": "Test prompt"},
     ]
 
-    with patch("src.utils.llm_runner.litellm_client.call_async", side_effect=mock_call_async):
+    with patch("src.utils.llm_runner._litellm_client.execute", side_effect=mock_call_async):
         results = await execute_parallel(
             models=["gpt-5-mini", "haiku"],
             messages=messages,
@@ -43,7 +45,7 @@ async def test_execute_parallel_all_success():
     assert all(r.status == "success" for r in results)
     assert call_count[0] == 2
     assert "gpt-5-mini" in models_used
-    assert "haiku" in models_used
+    assert "claude-haiku-4.5" in models_used  # Changed from "haiku" to canonical name
     assert all(r.metadata is not None for r in results)
 
 
@@ -54,7 +56,7 @@ async def test_execute_parallel_partial_failure():
 
     call_count = [0]
 
-    async def mock_call_async(messages: list[dict], model: str | None = None, enable_web_search: bool = False):
+    async def mock_call_async(canonical_name: str, model_config, messages: list[dict], enable_web_search: bool = False):
         call_count[0] += 1
 
         if call_count[0] == 1:
@@ -62,15 +64,15 @@ async def test_execute_parallel_partial_failure():
             return ModelResponse(
                 content="Success",
                 status="success",
-                metadata=ModelResponseMetadata(model=model, prompt_tokens=100, completion_tokens=200, total_tokens=300),
+                metadata=ModelResponseMetadata(model=canonical_name, prompt_tokens=100, completion_tokens=200, total_tokens=300),
             )
         else:
             # Second model fails
-            return ModelResponse(content="", status="error", error="Timeout error", metadata=ModelResponseMetadata(model=model))
+            return ModelResponse(content="", status="error", error="Timeout error", metadata=ModelResponseMetadata(model=canonical_name))
 
     messages = [{"role": "user", "content": "Test prompt"}]
 
-    with patch("src.utils.llm_runner.litellm_client.call_async", side_effect=mock_call_async):
+    with patch("src.utils.llm_runner._litellm_client.execute", side_effect=mock_call_async):
         results = await execute_parallel(models=["gpt-5-mini", "haiku"], messages=messages)
 
     assert len(results) == 2
@@ -86,14 +88,14 @@ async def test_execute_parallel_uses_provided_messages():
 
     received_messages = []
 
-    async def mock_call_async(messages: list[dict], model: str | None = None, enable_web_search: bool = False):
+    async def mock_call_async(canonical_name: str, model_config, messages: list[dict], enable_web_search: bool = False):
         # Capture messages for verification
         received_messages.append(messages)
-        return ModelResponse(content="Response", status="success", metadata=ModelResponseMetadata(model=model, total_tokens=100))
+        return ModelResponse(content="Response", status="success", metadata=ModelResponseMetadata(model=canonical_name, total_tokens=100))
 
     messages = [{"role": "user", "content": "Test prompt"}]
 
-    with patch("src.utils.llm_runner.litellm_client.call_async", side_effect=mock_call_async):
+    with patch("src.utils.llm_runner._litellm_client.execute", side_effect=mock_call_async):
         results = await execute_parallel(models=["gpt-5-mini"], messages=messages)
 
     assert len(results) == 1
@@ -125,7 +127,7 @@ async def test_execute_single_success_with_artifacts():
         ),
     )
 
-    with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
+    with patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
         with patch("src.utils.artifacts.save_tool_artifacts", new_callable=AsyncMock) as mock_save_artifacts:
             mock_call.return_value = mock_response
             mock_save_artifacts.return_value = ["/test/artifact1.md", "/test/artifact2.json"]
@@ -140,9 +142,9 @@ async def test_execute_single_success_with_artifacts():
     assert result.metadata.artifacts == ["/test/artifact1.md", "/test/artifact2.json"]
     assert result.metadata.total_tokens == 15
 
-    # Verify litellm_client.call_async was called
+    # Verify litellm_client.execute was called
     mock_call.assert_called_once()
-    assert mock_call.call_args.kwargs["model"] == "gpt-5-mini"
+    assert mock_call.call_args.kwargs["canonical_name"] == "gpt-5-mini"
     assert mock_call.call_args.kwargs["messages"] == messages
 
     # Verify save_tool_artifacts was called with only response parameter
@@ -170,7 +172,7 @@ async def test_execute_single_with_messages():
         ),
     )
 
-    with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
+    with patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
         with patch("src.utils.artifacts.save_tool_artifacts", new_callable=AsyncMock) as mock_save_artifacts:
             mock_call.return_value = mock_response
             mock_save_artifacts.return_value = ["/test/artifact.md"]
@@ -182,6 +184,7 @@ async def test_execute_single_with_messages():
 
     assert result.status == "success"
     mock_call.assert_called_once()
+    assert mock_call.call_args.kwargs["canonical_name"] == "gpt-5-mini"
     assert mock_call.call_args.kwargs["messages"] == messages
 
 
@@ -197,7 +200,7 @@ async def test_execute_single_error_no_artifacts():
         metadata=ModelResponseMetadata(model="gpt-5-mini"),
     )
 
-    with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
+    with patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
         with patch("src.utils.artifacts.save_tool_artifacts", new_callable=AsyncMock) as mock_save_artifacts:
             mock_call.return_value = error_response
 
@@ -230,7 +233,7 @@ async def test_execute_single_no_artifacts_returned():
         ),
     )
 
-    with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
+    with patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
         with patch("src.utils.artifacts.save_tool_artifacts", new_callable=AsyncMock) as mock_save_artifacts:
             mock_call.return_value = mock_response
             mock_save_artifacts.return_value = None
@@ -263,7 +266,7 @@ async def test_execute_single_preserves_issues_in_content():
         ),
     )
 
-    with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
+    with patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
         with patch("src.utils.artifacts.save_tool_artifacts", new_callable=AsyncMock) as mock_save_artifacts:
             mock_call.return_value = response_with_issues
             mock_save_artifacts.return_value = ["/test/review.json"]
@@ -281,3 +284,126 @@ async def test_execute_single_preserves_issues_in_content():
     save_call_args = mock_save_artifacts.call_args
     saved_response = save_call_args.kwargs["response"]
     assert "issues_found" in saved_response.content
+
+
+# ============================================================================
+# Tests for Model Routing (API vs CLI)
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_execute_single_routes_api_model():
+    """Test that API models are routed to litellm_client."""
+    from src.models.config import ModelConfig
+
+    messages = [{"role": "user", "content": "Test"}]
+
+    mock_response = ModelResponse(
+        content="API response",
+        status="success",
+        metadata=ModelResponseMetadata(model="gpt-5-mini", total_tokens=100),
+    )
+
+    with (
+        patch("src.utils.llm_runner._resolver.resolve") as mock_resolve,
+        patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_api_call,
+        patch("src.utils.llm_runner._cli_executor.execute", new_callable=AsyncMock) as mock_cli_execute,
+        patch("src.utils.artifacts.save_tool_artifacts", new_callable=AsyncMock, return_value=None),
+    ):
+        # Configure mock resolver to return API model config
+        api_config = ModelConfig(litellm_model="openai/gpt-5-mini")
+        mock_resolve.return_value = ("gpt-5-mini", api_config)
+        mock_api_call.return_value = mock_response
+
+        result = await execute_single(model="gpt-5-mini", messages=messages)
+
+        # Verify API client was called
+        assert mock_api_call.called
+        assert mock_api_call.call_args.kwargs["canonical_name"] == "gpt-5-mini"
+        assert mock_api_call.call_args.kwargs["model_config"] == api_config
+
+        # Verify CLI executor was NOT called
+        assert not mock_cli_execute.called
+
+        assert result.status == "success"
+        assert result.content == "API response"
+
+
+@pytest.mark.asyncio
+async def test_execute_single_routes_cli_model():
+    """Test that CLI models are routed to CLI executor."""
+    from src.models.config import ModelConfig
+
+    messages = [{"role": "user", "content": "Test"}]
+
+    mock_response = ModelResponse(
+        content="CLI response",
+        status="success",
+        metadata=ModelResponseMetadata(model="gemini-cli", total_tokens=0),
+    )
+
+    with (
+        patch("src.utils.llm_runner._resolver.resolve") as mock_resolve,
+        patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_api_call,
+        patch("src.utils.llm_runner._cli_executor.execute", new_callable=AsyncMock) as mock_cli_execute,
+        patch("src.utils.artifacts.save_tool_artifacts", new_callable=AsyncMock, return_value=None),
+    ):
+        # Configure mock resolver to return CLI model config
+        cli_config = ModelConfig(provider="cli", cli_command="gemini", cli_args=["chat"], cli_parser="json")
+        mock_resolve.return_value = ("gemini-cli", cli_config)
+        mock_cli_execute.return_value = mock_response
+
+        result = await execute_single(model="gemini-cli", messages=messages)
+
+        # Verify CLI executor was called
+        assert mock_cli_execute.called
+        assert mock_cli_execute.call_args.kwargs["canonical_name"] == "gemini-cli"
+        assert mock_cli_execute.call_args.kwargs["model_config"] == cli_config
+        assert mock_cli_execute.call_args.kwargs["messages"] == messages
+
+        # Verify API client was NOT called
+        assert not mock_api_call.called
+
+        assert result.status == "success"
+        assert result.content == "CLI response"
+
+
+@pytest.mark.asyncio
+async def test_execute_parallel_routes_mixed_models():
+    """Test that execute_parallel routes API and CLI models correctly."""
+    from src.models.config import ModelConfig
+
+    set_request_context(thread_id="test-thread")
+
+    messages = [{"role": "user", "content": "Test"}]
+
+    api_response = ModelResponse(
+        content="API response",
+        status="success",
+        metadata=ModelResponseMetadata(model="gpt-5-mini", total_tokens=100),
+    )
+
+    cli_response = ModelResponse(
+        content="CLI response",
+        status="success",
+        metadata=ModelResponseMetadata(model="gemini-cli", total_tokens=0),
+    )
+
+    def mock_resolve(model_name):
+        if model_name == "gpt-5-mini":
+            return ("gpt-5-mini", ModelConfig(litellm_model="openai/gpt-5-mini"))
+        else:  # gemini-cli
+            return ("gemini-cli", ModelConfig(provider="cli", cli_command="gemini", cli_args=["chat"], cli_parser="json"))
+
+    with (
+        patch("src.utils.llm_runner._resolver.resolve", side_effect=mock_resolve),
+        patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock, return_value=api_response),
+        patch("src.utils.llm_runner._cli_executor.execute", new_callable=AsyncMock, return_value=cli_response),
+        patch("src.utils.artifacts.save_tool_artifacts", new_callable=AsyncMock, return_value=None),
+    ):
+        results = await execute_parallel(models=["gpt-5-mini", "gemini-cli"], messages=messages)
+
+        assert len(results) == 2
+        assert all(r.status == "success" for r in results)
+        assert any(r.content == "API response" for r in results)
+        assert any(r.content == "CLI response" for r in results)

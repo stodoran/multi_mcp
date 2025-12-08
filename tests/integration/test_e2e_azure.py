@@ -4,8 +4,8 @@ import os
 
 import pytest
 
-from src.models.litellm_client import litellm_client
 from src.models.resolver import ModelResolver
+from src.utils.llm_runner import execute_single
 
 
 @pytest.mark.skipif(not os.getenv("RUN_E2E"), reason="Integration test")
@@ -18,7 +18,10 @@ async def test_azure_model_call():
     """
     messages = [{"role": "user", "content": "Say 'Azure test successful' and nothing else."}]
 
-    response = await litellm_client.call_async(messages=messages, model="azure-mini")
+    response = await execute_single(
+        model="azure-mini",
+        messages=messages,
+    )
 
     if response.status == "error" and "Connection error" in response.error:
         pytest.skip(f"Azure connection failed (may not be configured): {response.error}")

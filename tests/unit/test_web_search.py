@@ -6,6 +6,7 @@ import pytest
 
 from src.models.config import ModelConfig
 from src.models.litellm_client import LiteLLMClient
+from src.models.resolver import ModelResolver
 
 
 def test_has_provider_web_search():
@@ -43,8 +44,16 @@ async def test_web_search_disabled_by_default():
         mock_completion.return_value = mock_response
 
         client = LiteLLMClient()
-        response = await client.call_async(
-            messages=[{"role": "user", "content": "Hello"}], model="claude-sonnet-4.5", enable_web_search=False
+
+        # Resolve model first
+        resolver = ModelResolver()
+        canonical_name, model_config = resolver.resolve("claude-sonnet-4.5")
+
+        response = await client.execute(
+            canonical_name=canonical_name,
+            model_config=model_config,
+            messages=[{"role": "user", "content": "Hello"}],
+            enable_web_search=False,
         )
 
         # Verify tools were NOT passed
@@ -77,9 +86,15 @@ async def test_web_search_unsupported_model_silent():
         mock_completion.return_value = mock_response
 
         client = LiteLLMClient()
-        response = await client.call_async(
+
+        # Resolve model first
+        resolver = ModelResolver()
+        canonical_name, model_config = resolver.resolve("gpt-5-nano")
+
+        response = await client.execute(
+            canonical_name=canonical_name,
+            model_config=model_config,
             messages=[{"role": "user", "content": "Hello"}],
-            model="gpt-5-nano",  # Model without web search support
             enable_web_search=True,
         )
 
@@ -115,7 +130,16 @@ async def test_web_search_openai_provider():
 
         client = LiteLLMClient()
 
+        # Resolve model first
+        resolver = ModelResolver()
+        canonical_name, model_config = resolver.resolve("gpt-5-mini")
+
         # Test OpenAI (gpt-5-mini) - still has web search support
-        await client.call_async(messages=[{"role": "user", "content": "Test"}], model="gpt-5-mini", enable_web_search=True)
+        await client.execute(
+            canonical_name=canonical_name,
+            model_config=model_config,
+            messages=[{"role": "user", "content": "Test"}],
+            enable_web_search=True,
+        )
         call_kwargs = mock_completion.call_args[1]
         assert call_kwargs["tools"] == [{"type": "web_search"}]

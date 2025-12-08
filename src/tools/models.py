@@ -2,8 +2,8 @@
 
 import logging
 
-from src.models.litellm_client import litellm_client
 from src.models.resolver import ModelResolver
+from src.utils.llm_runner import validate_model_credentials
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ async def models_impl() -> dict:
             if litellm_model:
                 # Use public method for credential validation (no API call)
                 try:
-                    error = litellm_client.validate_model_credentials(litellm_model)
+                    error = validate_model_credentials(litellm_model)
                     model["credential_status"] = "valid" if not error else "invalid"
                     if error:
                         model["credential_error"] = error

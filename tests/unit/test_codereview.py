@@ -71,7 +71,7 @@ class TestCodeReviewStepLogic:
     async def test_no_files_returns_continue(self):
         """Test that no relevant files returns continue action with reason to add files."""
         # Create thread first to get past step 1
-        with patch("src.utils.llm_runner.litellm_client.call_async") as mock_llm:
+        with patch("src.utils.llm_runner._litellm_client.execute") as mock_llm:
             # Step 1: Get checklist
             result1 = await codereview_impl(
                 name="Review",
@@ -136,7 +136,7 @@ class TestCodeReviewStepLogic:
 
         with (
             patch(
-                "src.utils.llm_runner.litellm_client.call_async",
+                "src.utils.llm_runner._litellm_client.execute",
                 return_value=mock_llm_response('{"status": "no_issues_found", "message": "All good"}'),
             ) as mock_llm,
             patch("src.utils.prompts.build_expert_context", return_value="<expert context>"),
@@ -195,7 +195,7 @@ class TestCodeReviewLLMResponseParsing:
             }"""
 
         with (
-            patch("src.utils.llm_runner.litellm_client.call_async", return_value=mock_llm_response(json_response)),
+            patch("src.utils.llm_runner._litellm_client.execute", return_value=mock_llm_response(json_response)),
             patch("src.utils.prompts.build_expert_context", return_value="<expert context>"),
             patch("src.utils.repository.build_repository_context", return_value=None),
         ):
@@ -226,7 +226,7 @@ class TestCodeReviewLLMResponseParsing:
             }"""
 
         with (
-            patch("src.utils.llm_runner.litellm_client.call_async", return_value=mock_llm_response(json_response)),
+            patch("src.utils.llm_runner._litellm_client.execute", return_value=mock_llm_response(json_response)),
             patch("src.utils.prompts.build_expert_context", return_value="<expert context>"),
             patch("src.utils.repository.build_repository_context", return_value=None),
         ):
@@ -250,7 +250,7 @@ class TestCodeReviewLLMResponseParsing:
             }"""
 
         with (
-            patch("src.utils.llm_runner.litellm_client.call_async", return_value=mock_llm_response(json_response)),
+            patch("src.utils.llm_runner._litellm_client.execute", return_value=mock_llm_response(json_response)),
             patch("src.utils.prompts.build_expert_context", return_value="<expert context>"),
             patch("src.utils.repository.build_repository_context", return_value=None),
         ):
@@ -274,7 +274,7 @@ class TestCodeReviewLLMResponseParsing:
             }"""
 
         with (
-            patch("src.utils.llm_runner.litellm_client.call_async", return_value=mock_llm_response(json_response)),
+            patch("src.utils.llm_runner._litellm_client.execute", return_value=mock_llm_response(json_response)),
             patch("src.utils.prompts.build_expert_context", return_value="<expert context>"),
             patch("src.utils.repository.build_repository_context", return_value=None),
         ):
@@ -303,7 +303,7 @@ class TestCodeReviewLLMResponseParsing:
             }"""
 
         with (
-            patch("src.utils.llm_runner.litellm_client.call_async", return_value=mock_llm_response(json_response)),
+            patch("src.utils.llm_runner._litellm_client.execute", return_value=mock_llm_response(json_response)),
             patch("src.utils.prompts.build_expert_context", return_value="<expert context>"),
             patch("src.utils.repository.build_repository_context", return_value=None),
         ):
@@ -347,7 +347,7 @@ class TestCodeReviewErrorHandling:
         plain_text = "This is plain text, not JSON"
 
         with (
-            patch("src.utils.llm_runner.litellm_client.call_async", return_value=mock_llm_response(plain_text)),
+            patch("src.utils.llm_runner._litellm_client.execute", return_value=mock_llm_response(plain_text)),
             patch("src.utils.prompts.build_expert_context", return_value="<expert context>"),
             patch("src.utils.repository.build_repository_context", return_value=None),
         ):
@@ -370,7 +370,7 @@ class TestCodeReviewErrorHandling:
         json_response = '{"message": "Missing status field"}'
 
         with (
-            patch("src.utils.llm_runner.litellm_client.call_async", return_value=mock_llm_response(json_response)),
+            patch("src.utils.llm_runner._litellm_client.execute", return_value=mock_llm_response(json_response)),
             patch("src.utils.prompts.build_expert_context", return_value="<expert context>"),
             patch("src.utils.repository.build_repository_context", return_value=None),
         ):
@@ -389,7 +389,7 @@ class TestCodeReviewErrorHandling:
         """Test that unknown status value is handled gracefully."""
         with (
             patch(
-                "src.utils.llm_runner.litellm_client.call_async",
+                "src.utils.llm_runner._litellm_client.execute",
                 return_value=mock_llm_response('{"status": "unknown_status_value", "message": "Unknown"}'),
             ),
             patch("src.utils.prompts.build_expert_context", return_value="<expert context>"),
@@ -410,7 +410,7 @@ class TestCodeReviewErrorHandling:
         """Test 'review_complete' without issues_found field."""
         with (
             patch(
-                "src.utils.llm_runner.litellm_client.call_async",
+                "src.utils.llm_runner._litellm_client.execute",
                 return_value=mock_llm_response('{"status": "review_complete", "message": "Done"}'),
             ),
             patch("src.utils.prompts.build_expert_context", return_value="<expert context>"),
@@ -430,7 +430,7 @@ class TestCodeReviewErrorHandling:
         json_response = '{"status": "no_issues_found", "message": "All good"}'
 
         with (
-            patch("src.utils.llm_runner.litellm_client.call_async", return_value=mock_llm_response(json_response)),
+            patch("src.utils.llm_runner._litellm_client.execute", return_value=mock_llm_response(json_response)),
             patch("src.utils.prompts.build_expert_context", return_value="<expert context>"),
             patch("src.utils.repository.build_repository_context", return_value=None),
         ):
@@ -453,7 +453,7 @@ class TestCodeReviewErrorHandling:
         json_response = '{"status": "no_issues_found", "message": "All good"}'  # Empty usage data
 
         with (
-            patch("src.utils.llm_runner.litellm_client.call_async", return_value=mock_llm_response(json_response)),
+            patch("src.utils.llm_runner._litellm_client.execute", return_value=mock_llm_response(json_response)),
             patch("src.utils.prompts.build_expert_context", return_value="<expert context>"),
             patch("src.utils.repository.build_repository_context", return_value=None),
         ):
@@ -477,7 +477,7 @@ class TestCodeReviewContextBuilding:
         """Test that LLM is called with files via MessageBuilder."""
         json_response = '{"status": "no_issues_found", "message": "Good"}'
 
-        with patch("src.utils.llm_runner.litellm_client.call_async", return_value=mock_llm_response(json_response)) as mock_llm:
+        with patch("src.utils.llm_runner._litellm_client.execute", return_value=mock_llm_response(json_response)) as mock_llm:
             # Step 1 always returns checklist, regardless of next_action or files
             result = await codereview_impl(
                 name="Review",
@@ -503,7 +503,7 @@ class TestCodeReviewContextBuilding:
         issues = [{"severity": "high", "location": "auth.py:10", "description": "Security issue"}]
 
         with (
-            patch("src.utils.llm_runner.litellm_client.call_async", return_value=mock_llm_response(json_response)) as mock_llm,
+            patch("src.utils.llm_runner._litellm_client.execute", return_value=mock_llm_response(json_response)) as mock_llm,
             patch("src.utils.prompts.build_expert_context", return_value="<expert context>"),
             patch("src.utils.repository.build_repository_context", return_value=None),
         ):

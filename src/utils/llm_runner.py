@@ -3,10 +3,65 @@
 import asyncio
 import logging
 
-from src.models.litellm_client import litellm_client
+from src.models.cli_executor import CLIExecutor
+from src.models.config import ModelConfig
+from src.models.litellm_client import LiteLLMClient
+from src.models.resolver import ModelResolver
 from src.schemas.base import ModelResponse
 
 logger = logging.getLogger(__name__)
+
+# Module-level private instances for routing
+_resolver = ModelResolver()
+_cli_executor = CLIExecutor()
+_litellm_client = LiteLLMClient()
+
+
+def validate_model_credentials(litellm_model: str) -> str | None:
+    """Validate provider credentials for an API model.
+
+    Args:
+        litellm_model: LiteLLM model string (e.g., "openai/gpt-5-mini")
+
+    Returns:
+        Error message if credentials missing, None if valid
+    """
+    return _litellm_client.validate_model_credentials(litellm_model)
+
+
+async def _route_model_execution(
+    canonical_name: str,
+    model_config: ModelConfig,
+    messages: list[dict],
+    enable_web_search: bool = False,
+) -> ModelResponse:
+    """Route model execution to appropriate executor (CLI or API).
+
+    Args:
+        canonical_name: Resolved canonical model name
+        model_config: Model configuration object
+        messages: List of message dicts
+        enable_web_search: Enable provider-native web search if supported (API only)
+
+    Returns:
+        ModelResponse from the appropriate executor
+    """
+    if model_config.is_cli_model():
+        logger.debug(f"[LLM_RUNNER] Routing {canonical_name} to CLI executor")
+        return await _cli_executor.execute(
+            canonical_name=canonical_name,
+            model_config=model_config,
+            messages=messages,
+            enable_web_search=enable_web_search,
+        )
+    else:
+        logger.debug(f"[LLM_RUNNER] Routing {canonical_name} to API client")
+        return await _litellm_client.execute(
+            canonical_name=canonical_name,
+            model_config=model_config,
+            messages=messages,
+            enable_web_search=enable_web_search,
+        )
 
 
 async def execute_single(
@@ -15,19 +70,26 @@ async def execute_single(
     enable_web_search: bool = False,
 ) -> ModelResponse:
     """Execute single-model LLM call with automatic artifact saving.
+
+    Routes to appropriate executor based on model type (API vs CLI).
+
     Args:
         model: Model name to use
         messages: Pre-built messages array
-        enable_web_search: Enable provider-native web search if supported
+        enable_web_search: Enable provider-native web search if supported (API only)
 
     Returns:
         ModelResponse with artifacts in metadata if saving succeeded
     """
     from src.utils.artifacts import save_tool_artifacts
 
-    response = await litellm_client.call_async(
+    # Resolve model and route to appropriate executor
+    canonical_name, model_config = _resolver.resolve(model)
+
+    response = await _route_model_execution(
+        canonical_name=canonical_name,
+        model_config=model_config,
         messages=messages,
-        model=model,
         enable_web_search=enable_web_search,
     )
 
@@ -69,9 +131,13 @@ async def execute_parallel(
 
     async def _bounded_call(model_name: str) -> ModelResponse:
         async with sem:
-            response = await litellm_client.call_async(
+            # Resolve model and route to appropriate executor
+            canonical_name, model_config = _resolver.resolve(model_name)
+
+            response = await _route_model_execution(
+                canonical_name=canonical_name,
+                model_config=model_config,
                 messages=messages,
-                model=model_name,
                 enable_web_search=enable_web_search,
             )
 

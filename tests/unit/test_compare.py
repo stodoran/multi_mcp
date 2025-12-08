@@ -12,7 +12,7 @@ from src.utils.context import set_request_context
 
 
 def mock_model_response(content="Response", model="test-model", error=None):
-    """Helper to create ModelResponse for mocking litellm_client.call_async."""
+    """Helper to create ModelResponse for mocking litellm_client.execute."""
     if error:
         return ModelResponse(
             content="",
@@ -122,7 +122,7 @@ class TestCompareImpl:
             ),
         )
 
-        with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
+        with patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_response
 
             result = await compare_impl(
@@ -144,13 +144,13 @@ class TestCompareImpl:
     async def test_partial_failure(self):
         """Test compare with one model failing."""
 
-        async def mock_call(messages, model, enable_web_search=False):
-            if model == "model-a":
+        async def mock_call(canonical_name, model_config, messages, enable_web_search=False):
+            if canonical_name == "model-a":
                 return mock_model_response(content="Success", model="model-a")
             else:
                 return mock_model_response(model="model-b", error="Model B failed")
 
-        with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call_async:
+        with patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call_async:
             mock_call_async.side_effect = mock_call
 
             result = await compare_impl(
@@ -170,7 +170,7 @@ class TestCompareImpl:
     @pytest.mark.asyncio
     async def test_all_models_fail(self):
         """Test compare with all models failing."""
-        with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
+        with patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_model_response(error="All failed")
 
             result = await compare_impl(
@@ -191,7 +191,7 @@ class TestCompareImpl:
         """Test that thread_id is passed through correctly."""
         mock_response = mock_model_response(content="ok")
 
-        with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
+        with patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_response
 
             result = await compare_impl(
@@ -207,7 +207,7 @@ class TestCompareImpl:
         set_request_context(thread_id="test-thread")
         mock_response = mock_model_response(content="ok")
 
-        with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
+        with patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_response
 
             result = await compare_impl(
@@ -234,7 +234,7 @@ class TestCompareImpl:
         set_request_context(thread_id="test-thread")
         mock_response = mock_model_response(content="ok")
 
-        with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
+        with patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_response
 
             await compare_impl(
@@ -266,7 +266,7 @@ class TestCompareImpl:
         """Test compare handles None/empty files identically."""
         mock_response = mock_model_response(content="Response", model="gpt-5-mini")
 
-        with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
+        with patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_response
 
             result = await compare_impl(
@@ -298,7 +298,7 @@ class TestCompareImpl:
 
         mock_response = mock_model_response(content="Looks good", model="gpt-5-mini")
 
-        with patch("src.utils.llm_runner.litellm_client.call_async", new_callable=AsyncMock) as mock_call:
+        with patch("src.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_response
 
             result = await compare_impl(

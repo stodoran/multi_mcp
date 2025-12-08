@@ -21,12 +21,11 @@ async def test_claude_cli_basic_smoke(require_cli):
     """Smoke test: Claude CLI basic execution."""
     require_cli("claude")
 
-    from src.models.litellm_client import LiteLLMClient
+    from src.utils.llm_runner import execute_single
 
-    client = LiteLLMClient()
-    result = await client.call_async(
-        messages=[{"role": "user", "content": "Say 'CLI working'"}],
+    result = await execute_single(
         model="claude-cli",
+        messages=[{"role": "user", "content": "Say 'CLI working'"}],
     )
 
     assert result.status == "success", f"Expected success, got: {result.error}"
@@ -40,12 +39,11 @@ async def test_claude_cli_alias_smoke(require_cli):
     """Smoke test: Claude CLI with alias."""
     require_cli("claude")
 
-    from src.models.litellm_client import LiteLLMClient
+    from src.utils.llm_runner import execute_single
 
-    client = LiteLLMClient()
-    result = await client.call_async(
-        messages=[{"role": "user", "content": "Say 'Alias working'"}],
+    result = await execute_single(
         model="cl-cli",  # Using alias
+        messages=[{"role": "user", "content": "Say 'Alias working'"}],
     )
 
     assert result.status == "success", f"Expected success, got: {result.error}"
@@ -58,12 +56,11 @@ async def test_gemini_cli_basic_smoke(require_cli):
     """Smoke test: Gemini CLI basic execution."""
     require_cli("gemini")
 
-    from src.models.litellm_client import LiteLLMClient
+    from src.utils.llm_runner import execute_single
 
-    client = LiteLLMClient()
-    result = await client.call_async(
-        messages=[{"role": "user", "content": "Say 'CLI working'"}],
+    result = await execute_single(
         model="gemini-cli",
+        messages=[{"role": "user", "content": "Say 'CLI working'"}],
     )
 
     assert result.status == "success", f"Expected success, got: {result.error}"
@@ -76,12 +73,11 @@ async def test_gemini_cli_alias_smoke(require_cli):
     """Smoke test: Gemini CLI with alias."""
     require_cli("gemini")
 
-    from src.models.litellm_client import LiteLLMClient
+    from src.utils.llm_runner import execute_single
 
-    client = LiteLLMClient()
-    result = await client.call_async(
-        messages=[{"role": "user", "content": "Say 'Alias working'"}],
+    result = await execute_single(
         model="gem-cli",  # Using alias
+        messages=[{"role": "user", "content": "Say 'Alias working'"}],
     )
 
     assert result.status == "success", f"Expected success, got: {result.error}"
@@ -94,12 +90,11 @@ async def test_codex_cli_basic_smoke(require_cli):
     """Smoke test: Codex CLI basic execution."""
     require_cli("codex")
 
-    from src.models.litellm_client import LiteLLMClient
+    from src.utils.llm_runner import execute_single
 
-    client = LiteLLMClient()
-    result = await client.call_async(
-        messages=[{"role": "user", "content": "Say 'CLI working'"}],
+    result = await execute_single(
         model="codex-cli",
+        messages=[{"role": "user", "content": "Say 'CLI working'"}],
     )
 
     assert result.status == "success", f"Expected success, got: {result.error}"
@@ -112,12 +107,11 @@ async def test_codex_cli_alias_smoke(require_cli):
     """Smoke test: Codex CLI with alias."""
     require_cli("codex")
 
-    from src.models.litellm_client import LiteLLMClient
+    from src.utils.llm_runner import execute_single
 
-    client = LiteLLMClient()
-    result = await client.call_async(
-        messages=[{"role": "user", "content": "Say 'Alias working'"}],
+    result = await execute_single(
         model="cx-cli",  # Using alias
+        messages=[{"role": "user", "content": "Say 'Alias working'"}],
     )
 
     assert result.status == "success", f"Expected success, got: {result.error}"

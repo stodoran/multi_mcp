@@ -8,7 +8,7 @@ import time
 
 import pytest
 
-from src.models.litellm_client import LiteLLMClient
+from src.utils.llm_runner import execute_single
 
 
 class TestCLIPerformance:
@@ -21,11 +21,10 @@ class TestCLIPerformance:
         if not has_gemini_cli:
             pytest.skip("Need Gemini CLI for this test")
 
-        client = LiteLLMClient()
         messages = [{"role": "user", "content": "Say hello in one word."}]
 
         start = time.time()
-        result = await client.call_async(messages=messages, model="gemini-cli")
+        result = await execute_single(model="gemini-cli", messages=messages)
         duration = time.time() - start
 
         assert result.status == "success"
@@ -41,11 +40,10 @@ class TestCLIPerformance:
         if not has_gemini_cli:
             pytest.skip("Need Gemini CLI for this test")
 
-        client = LiteLLMClient()
         messages = [{"role": "user", "content": "Count to 3"}]
 
         start = time.perf_counter()
-        result = await client.call_async(messages=messages, model="gemini-cli")
+        result = await execute_single(model="gemini-cli", messages=messages)
         actual_duration_ms = int((time.perf_counter() - start) * 1000)
 
         assert result.status == "success"
@@ -66,12 +64,11 @@ class TestCLIConcurrency:
         if not has_gemini_cli:
             pytest.skip("Need Gemini CLI for this test")
 
-        client = LiteLLMClient()
         messages = [{"role": "user", "content": "Say hello"}]
 
         # Launch 3 concurrent CLI calls
         start = time.time()
-        tasks = [client.call_async(messages=messages, model="gemini-cli") for _ in range(3)]
+        tasks = [execute_single(model="gemini-cli", messages=messages) for _ in range(3)]
         results = await asyncio.gather(*tasks)
         duration = time.time() - start
 
@@ -101,11 +98,10 @@ class TestCLIConcurrency:
         if len(available_clis) < 2:
             pytest.skip("Need at least 2 CLI models for this test")
 
-        client = LiteLLMClient()
         messages = [{"role": "user", "content": "What is 2+2?"}]
 
         # Launch concurrent calls to different CLIs
-        tasks = [client.call_async(messages=messages, model=cli) for cli in available_clis[:2]]
+        tasks = [execute_single(model=cli, messages=messages) for cli in available_clis[:2]]
         results = await asyncio.gather(*tasks)
 
         # All should succeed
@@ -125,8 +121,6 @@ class TestCLIConcurrency:
         if not has_gemini_cli:
             pytest.skip("Need Gemini CLI for this test")
 
-        client = LiteLLMClient()
-
         # Different prompts
         prompts = [
             "What is 1+1?",
@@ -136,7 +130,7 @@ class TestCLIConcurrency:
         messages_list = [[{"role": "user", "content": p}] for p in prompts]
 
         # Launch concurrent calls
-        tasks = [client.call_async(messages=msgs, model="gemini-cli") for msgs in messages_list]
+        tasks = [execute_single(model="gemini-cli", messages=msgs) for msgs in messages_list]
         results = await asyncio.gather(*tasks)
 
         # All should succeed
@@ -162,13 +156,12 @@ class TestCLIStressTests:
         if not has_gemini_cli:
             pytest.skip("Need Gemini CLI for this test")
 
-        client = LiteLLMClient()
         messages = [{"role": "user", "content": "Say ok"}]
 
         # Run 5 sequential calls
         results = []
         for _ in range(5):
-            result = await client.call_async(messages=messages, model="gemini-cli")
+            result = await execute_single(model="gemini-cli", messages=messages)
             results.append(result)
 
         # All should succeed
@@ -189,11 +182,10 @@ class TestCLIStressTests:
         if not has_gemini_cli:
             pytest.skip("Need Gemini CLI for this test")
 
-        client = LiteLLMClient()
         messages = [{"role": "user", "content": "Say hello"}]
 
         # Launch 5 concurrent calls
-        tasks = [client.call_async(messages=messages, model="gemini-cli") for _ in range(5)]
+        tasks = [execute_single(model="gemini-cli", messages=messages) for _ in range(5)]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Most should succeed (allow for rate limiting)

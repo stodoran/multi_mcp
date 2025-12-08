@@ -69,7 +69,10 @@ class TestLiteLLMClient:
         ):
             mock_completion.return_value = mock_llm_response
 
-            result = await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="gpt-5-mini")
+            canonical_name, model_config = client.resolver.resolve("gpt-5-mini")
+            result = await client.execute(
+                canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}]
+            )
 
             assert isinstance(result, ModelResponse)
             assert result.status == "success"
@@ -91,9 +94,11 @@ class TestLiteLLMClient:
         ):
             mock_completion.return_value = mock_llm_response
 
-            result = await client.call_async(
+            canonical_name, model_config = client.resolver.resolve("mini")  # Alias
+            result = await client.execute(
+                canonical_name=canonical_name,
+                model_config=model_config,
                 messages=[{"role": "user", "content": "Hello"}],
-                model="mini",  # Alias
             )
 
             assert result.metadata.model == "gpt-5-mini"
@@ -111,7 +116,11 @@ class TestLiteLLMClient:
         ):
             mock_completion.return_value = mock_llm_response
 
-            result = await client.call_async(messages=[{"role": "user", "content": "Hello"}])
+            default_model = client.resolver.get_default()
+            canonical_name, model_config = client.resolver.resolve(default_model)
+            result = await client.execute(
+                canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}]
+            )
 
             assert result.metadata.model == "gpt-5-mini"
             call_kwargs = mock_completion.call_args[1]
@@ -127,7 +136,8 @@ class TestLiteLLMClient:
         ):
             mock_completion.return_value = mock_llm_response
 
-            await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="gpt-5-pro")  # No temperature constraint
+            canonical_name, model_config = client.resolver.resolve("gpt-5-pro")  # No temperature constraint
+            await client.execute(canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}])
 
             call_kwargs = mock_completion.call_args[1]
             # Should use default temperature from settings (0.2)
@@ -143,7 +153,8 @@ class TestLiteLLMClient:
         ):
             mock_completion.return_value = mock_llm_response
 
-            await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="gpt-5-mini")  # Has temperature=1.0 constraint
+            canonical_name, model_config = client.resolver.resolve("gpt-5-mini")  # Has temperature=1.0 constraint
+            await client.execute(canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}])
 
             call_kwargs = mock_completion.call_args[1]
             # Constraint should override default temperature
@@ -159,7 +170,8 @@ class TestLiteLLMClient:
         ):
             mock_completion.return_value = mock_llm_response
 
-            await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="gpt-5-mini")
+            canonical_name, model_config = client.resolver.resolve("gpt-5-mini")
+            await client.execute(canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}])
 
             mock_log.assert_called_once()
             call_args = mock_log.call_args[1]
@@ -180,7 +192,10 @@ class TestLiteLLMClient:
         ):
             mock_completion.side_effect = Exception("API error")
 
-            result = await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="gpt-5-mini")
+            canonical_name, model_config = client.resolver.resolve("gpt-5-mini")
+            result = await client.execute(
+                canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}]
+            )
 
             assert isinstance(result, ModelResponse)
             assert result.status == "error"
@@ -197,7 +212,10 @@ class TestLiteLLMClient:
         ):
             mock_completion.side_effect = TimeoutError()
 
-            result = await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="gpt-5-mini")
+            canonical_name, model_config = client.resolver.resolve("gpt-5-mini")
+            result = await client.execute(
+                canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}]
+            )
 
             assert isinstance(result, ModelResponse)
             assert result.status == "error"
@@ -219,7 +237,8 @@ class TestLiteLLMClient:
         ):
             mock_completion.return_value = mock_llm_response
 
-            await client.call_async(messages=messages, model="gpt-5-mini")
+            canonical_name, model_config = client.resolver.resolve("gpt-5-mini")
+            await client.execute(canonical_name=canonical_name, model_config=model_config, messages=messages)
 
             call_kwargs = mock_completion.call_args[1]
             assert call_kwargs["input"] == messages  # Changed from "messages" to "input"
@@ -250,7 +269,8 @@ class TestLiteLLMClient:
         ):
             mock_completion.return_value = mock_llm_response
 
-            await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="custom-model")
+            canonical_name, model_config = client.resolver.resolve("custom-model")
+            await client.execute(canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}])
 
             call_kwargs = mock_completion.call_args[1]
             assert call_kwargs["top_p"] == 0.9
@@ -270,7 +290,8 @@ class TestLiteLLMClient:
         ):
             mock_completion.return_value = mock_llm_response
 
-            await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="gpt-5-mini")
+            canonical_name, model_config = client.resolver.resolve("gpt-5-mini")
+            await client.execute(canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}])
 
             call_kwargs = mock_completion.call_args[1]
             assert call_kwargs["max_tokens"] == 32768  # Default value
@@ -310,7 +331,10 @@ class TestLiteLLMClient:
             mock_settings.azure_api_key = None
             mock_settings.azure_api_base = "https://example.azure.com"
 
-            result = await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="azure-gpt-5-mini")
+            canonical_name, model_config = client.resolver.resolve("azure-gpt-5-mini")
+            result = await client.execute(
+                canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}]
+            )
 
             assert result.status == "error"
             assert "AZURE_API_KEY" in result.error
@@ -334,7 +358,10 @@ class TestLiteLLMClient:
             mock_settings.azure_api_key = "test-key"
             mock_settings.azure_api_base = None
 
-            result = await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="azure-gpt-5-mini")
+            canonical_name, model_config = client.resolver.resolve("azure-gpt-5-mini")
+            result = await client.execute(
+                canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}]
+            )
 
             assert result.status == "error"
             assert "AZURE_API_BASE" in result.error
@@ -358,7 +385,10 @@ class TestLiteLLMClient:
             mock_settings.azure_api_key = None
             mock_settings.azure_api_base = None
 
-            result = await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="azure-gpt-5-mini")
+            canonical_name, model_config = client.resolver.resolve("azure-gpt-5-mini")
+            result = await client.execute(
+                canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}]
+            )
 
             assert result.status == "error"
             assert "AZURE_API_KEY" in result.error
@@ -381,7 +411,10 @@ class TestLiteLLMClient:
         with patch("src.models.litellm_client.settings") as mock_settings:
             mock_settings.gemini_api_key = None
 
-            result = await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="gemini-2.5-flash")
+            canonical_name, model_config = client.resolver.resolve("gemini-2.5-flash")
+            result = await client.execute(
+                canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}]
+            )
 
             assert result.status == "error"
             assert "GEMINI_API_KEY" in result.error
@@ -403,7 +436,10 @@ class TestLiteLLMClient:
         with patch("src.models.litellm_client.settings") as mock_settings:
             mock_settings.anthropic_api_key = None
 
-            result = await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="claude-sonnet-4.5")
+            canonical_name, model_config = client.resolver.resolve("claude-sonnet-4.5")
+            result = await client.execute(
+                canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}]
+            )
 
             assert result.status == "error"
             assert "ANTHROPIC_API_KEY" in result.error
@@ -425,7 +461,10 @@ class TestLiteLLMClient:
         with patch("src.models.litellm_client.settings") as mock_settings:
             mock_settings.openrouter_api_key = None
 
-            result = await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="openrouter-model")
+            canonical_name, model_config = client.resolver.resolve("openrouter-model")
+            result = await client.execute(
+                canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}]
+            )
 
             assert result.status == "error"
             assert "OPENROUTER_API_KEY" in result.error
@@ -447,7 +486,10 @@ class TestLiteLLMClient:
         with patch("src.models.litellm_client.settings") as mock_settings:
             mock_settings.openai_api_key = None
 
-            result = await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="gpt-5-mini")
+            canonical_name, model_config = client.resolver.resolve("gpt-5-mini")
+            result = await client.execute(
+                canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}]
+            )
 
             assert result.status == "error"
             assert "OPENAI_API_KEY" in result.error
@@ -471,7 +513,10 @@ class TestLiteLLMClient:
             mock_settings.aws_secret_access_key = None
             mock_settings.aws_region_name = None
 
-            result = await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="bedrock-model")
+            canonical_name, model_config = client.resolver.resolve("bedrock-model")
+            result = await client.execute(
+                canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}]
+            )
 
             assert result.status == "error"
             assert "AWS_ACCESS_KEY_ID" in result.error
@@ -497,8 +542,34 @@ class TestLiteLLMClient:
             mock_settings.aws_secret_access_key = None
             mock_settings.aws_region_name = "us-east-1"
 
-            result = await client.call_async(messages=[{"role": "user", "content": "Hello"}], model="bedrock-model")
+            canonical_name, model_config = client.resolver.resolve("bedrock-model")
+            result = await client.execute(
+                canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}]
+            )
 
             assert result.status == "error"
             assert "AWS_SECRET_ACCESS_KEY" in result.error
             assert "already set: AWS_ACCESS_KEY_ID, AWS_REGION_NAME" in result.error
+
+    @pytest.mark.asyncio
+    async def test_call_async_rejects_cli_models(self, sample_config):
+        """Test that call_async rejects CLI models."""
+        config = ModelsConfiguration(
+            version="1.0",
+            default_model="gemini-cli",
+            models={
+                "gemini-cli": ModelConfig(provider="cli", cli_command="gemini", cli_args=["chat"], cli_parser="json"),
+            },
+        )
+        resolver = ModelResolver(config=config)
+        client = LiteLLMClient(resolver=resolver)
+
+        canonical_name, model_config = client.resolver.resolve("gemini-cli")
+        result = await client.execute(
+            canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "test"}]
+        )
+
+        assert result.status == "error"
+        assert "CLI model" in result.error
+        assert "Use CLIExecutor" in result.error
+        assert result.metadata.model == "gemini-cli"

@@ -128,7 +128,7 @@ class TestConsolidateModelResults:
     @pytest.mark.asyncio
     async def test_consolidation_failure_fallback(self):
         """On consolidation failure, return first successful result."""
-        with patch("src.models.litellm_client.litellm_client.call_async", new_callable=AsyncMock) as mock_llm:
+        with patch("src.models.litellm_client.LiteLLMClient.execute", new_callable=AsyncMock) as mock_llm:
             mock_llm.side_effect = Exception("API timeout")
 
             results = [

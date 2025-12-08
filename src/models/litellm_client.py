@@ -1,10 +1,7 @@
 """LiteLLM client wrapper with config-based model resolution."""
 
 import asyncio
-import json
 import logging
-import os
-import shutil
 import time
 from typing import Any
 
@@ -14,7 +11,6 @@ from src.config import settings
 from src.models.config import PROVIDERS, ModelConfig
 from src.models.resolver import ModelResolver
 from src.schemas.base import ModelResponse, ModelResponseMetadata
-from src.utils.json_parser import parse_llm_json
 from src.utils.request_logger import log_llm_interaction
 
 logger = logging.getLogger(__name__)
@@ -126,31 +122,37 @@ class LiteLLMClient:
         """
         return self._validate_provider_credentials(litellm_model)
 
-    async def call_async(
+    async def execute(
         self,
+        canonical_name: str,
+        model_config: ModelConfig,
         messages: list[dict],
-        model: str | None = None,
         enable_web_search: bool = False,
     ) -> ModelResponse:
-        """Call LiteLLM with config-based model resolution and return ModelResponse.
+        """Execute LiteLLM API call (API models only).
 
         Args:
+            canonical_name: Canonical model name (pre-resolved)
+            model_config: Model configuration (pre-resolved)
             messages: List of message dicts with role and content
-            model: Model name or alias (uses default if not specified)
             enable_web_search: Enable provider-native web search if supported
 
         Returns:
             ModelResponse with status, content, metadata, error
+
+        Note:
+            Model should already be resolved by the caller.
+            CLI models should be routed through CLIExecutor.
         """
-        # Resolve model: explicit > primary default
-        model = model or self.resolver.get_default()
-
         try:
-            canonical_name, model_config = self.resolver.resolve(model)
-
-            # Route to CLI execution if this is a CLI model
+            # Reject CLI models - they should be routed elsewhere
             if model_config.is_cli_model():
-                return await self._execute_cli_model(canonical_name, model_config, messages)
+                error_msg = f"Model '{canonical_name}' is a CLI model. Use CLIExecutor for CLI models."
+                logger.error(f"[MODEL_CALL] {error_msg}")
+                return ModelResponse.error_response(
+                    error=error_msg,
+                    model=canonical_name,
+                )
 
             # API model execution (existing logic)
             timeout = settings.model_timeout_seconds
@@ -179,7 +181,7 @@ class LiteLLMClient:
             if model_config.constraints and model_config.constraints.temperature is not None:
                 temp = model_config.constraints.temperature
 
-            logger.info(f"[MODEL_CALL] input={model} canonical={canonical_name} litellm={litellm_model} temp={temp}")
+            logger.info(f"[MODEL_CALL] canonical={canonical_name} litellm={litellm_model} temp={temp}")
 
             # Build kwargs starting with generic params from config
             kwargs: dict[str, Any] = {
@@ -239,282 +241,14 @@ class LiteLLMClient:
             return response
 
         except TimeoutError:
-            logger.error(f"[MODEL_CALL] Model {model} timed out after {timeout}s")
+            logger.error(f"[MODEL_CALL] Model {canonical_name} timed out after {timeout}s")
             return ModelResponse.error_response(
                 error=f"Request timed out after {timeout}s",
-                model=model,
+                model=canonical_name,
             )
         except Exception as e:
-            logger.error(f"[MODEL_CALL] Model {model} failed: {e}")
+            logger.error(f"[MODEL_CALL] Model {canonical_name} failed: {e}")
             return ModelResponse.error_response(
                 error=str(e),
-                model=model,
-            )
-
-    def _get_cli_install_hint(self, cli_command: str) -> str:
-        """Get installation hint for common CLI tools.
-
-        Args:
-            cli_command: CLI command name
-
-        Returns:
-            Installation hint string
-        """
-        hints = {
-            "gemini": "Install via: npm install -g @google/generative-ai-cli",
-            "codex": "Install via: npm install -g @anthropic-ai/codex-cli",
-            "claude": "Install via: pip install anthropic-cli",
-        }
-        return hints.get(cli_command, f"Ensure '{cli_command}' is installed and in PATH")
-
-    async def _execute_cli_model(
-        self,
-        canonical_name: str,
-        config: ModelConfig,
-        messages: list[dict],
-    ) -> ModelResponse:
-        """Execute CLI model via subprocess.
-
-        Args:
-            canonical_name: Canonical model name
-            config: Model configuration
-            messages: List of message dicts
-
-        Returns:
-            ModelResponse with CLI output
-        """
-        # Validate CLI command is set
-        if not config.cli_command:
-            error_msg = f"CLI model '{canonical_name}' has no cli_command configured"
-            logger.error(f"[CLI_CALL] {error_msg}")
-            return ModelResponse.error_response(
-                error=error_msg,
                 model=canonical_name,
             )
-
-        # Narrow type for type checker - we know cli_command is str here
-        cli_command: str = config.cli_command
-
-        # Check if CLI command exists
-        if not shutil.which(cli_command):
-            install_hint = self._get_cli_install_hint(cli_command)
-            error_msg = f"CLI command '{cli_command}' not found in PATH. {install_hint}"
-            logger.error(f"[CLI_CALL] {error_msg}")
-            return ModelResponse.error_response(
-                error=error_msg,
-                model=canonical_name,
-            )
-
-        # Extract prompt from messages (use last user message)
-        prompt = messages[-1]["content"] if messages else ""
-
-        # Build command
-        command = [cli_command] + config.cli_args
-
-        # Prepare environment
-        env = os.environ.copy()
-
-        # Inject API keys from settings into environment for expansion
-        # This allows ${ANTHROPIC_API_KEY} etc. to work even if not in os.environ
-        if settings.anthropic_api_key:
-            env["ANTHROPIC_API_KEY"] = settings.anthropic_api_key
-        if settings.openai_api_key:
-            env["OPENAI_API_KEY"] = settings.openai_api_key
-        if settings.gemini_api_key:
-            env["GEMINI_API_KEY"] = settings.gemini_api_key
-        if settings.openrouter_api_key:
-            env["OPENROUTER_API_KEY"] = settings.openrouter_api_key
-
-        # Now expand variables in cli_env (e.g., ${ANTHROPIC_API_KEY})
-        for key, value in config.cli_env.items():
-            expanded = os.path.expandvars(value)
-            # Only set if expansion worked (not still "${VAR}")
-            if expanded != value or not value.startswith("${"):
-                env[key] = expanded
-
-        # Use config timeout or fall back to settings
-        timeout = settings.model_timeout_seconds
-
-        logger.info(f"[CLI_CALL] model={canonical_name} command={cli_command} parser={config.cli_parser}")
-        logger.debug(f"[CLI_CALL] full_command={' '.join(command)}")
-
-        start_time = time.perf_counter()
-        process: asyncio.subprocess.Process | None = None
-
-        try:
-            # Execute CLI subprocess
-            process = await asyncio.create_subprocess_exec(
-                *command,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env=env,
-            )
-
-            stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                process.communicate(input=prompt.encode("utf-8")),
-                timeout=timeout,
-            )
-
-            latency_ms = int((time.perf_counter() - start_time) * 1000)
-
-            if process.returncode != 0:
-                stderr = stderr_bytes.decode("utf-8", errors="replace")
-                stdout = stdout_bytes.decode("utf-8", errors="replace")
-
-                # Use stderr if available, otherwise use stdout (some CLIs write errors to stdout)
-                error_output = stderr if stderr else stdout
-                error_preview = error_output[:500] if error_output else "(no output)"
-
-                install_hint = self._get_cli_install_hint(cli_command)
-                logger.error(f"[CLI_CALL] {canonical_name} failed with exit code {process.returncode}")
-                logger.debug(f"[CLI_CALL] stderr: {stderr[:1000]}")
-                logger.debug(f"[CLI_CALL] stdout: {stdout[:1000]}")
-                return ModelResponse.error_response(
-                    error=f"CLI '{cli_command}' failed with exit code {process.returncode}. "
-                    f"Error: {error_preview}\n\n"
-                    f"Troubleshooting: {install_hint}",
-                    model=canonical_name,
-                )
-
-            # Parse output
-            stdout = stdout_bytes.decode("utf-8", errors="replace")
-            content = self._parse_cli_output(stdout, config.cli_parser)
-
-            metadata = ModelResponseMetadata(
-                model=canonical_name,
-                prompt_tokens=0,  # CLI doesn't report tokens
-                completion_tokens=0,
-                total_tokens=0,
-                latency_ms=latency_ms,
-            )
-
-            response = ModelResponse(
-                content=content,
-                status="success",
-                metadata=metadata,
-            )
-
-            log_llm_interaction(
-                request_data={
-                    "model": canonical_name,
-                    "cli": True,
-                    "command": command,
-                    "prompt_length": len(prompt),
-                },
-                response_data=response.model_dump(),
-            )
-
-            return response
-
-        except TimeoutError:
-            latency_ms = int((time.perf_counter() - start_time) * 1000)
-
-            # Clean up timed-out subprocess
-            if process and process.returncode is None:
-                process.kill()
-                try:
-                    await process.communicate()  # Drain pipes to prevent resource leak
-                except Exception:
-                    logger.debug("[CLI_CALL] Error while cleaning up timed-out CLI process", exc_info=True)
-
-            logger.error(f"[CLI_CALL] {canonical_name} timed out after {timeout}s")
-            return ModelResponse.error_response(
-                error=f"CLI '{cli_command}' timed out after {timeout}s. "
-                f"The command took longer than expected. "
-                f"Consider using a faster model or increasing MODEL_TIMEOUT_SECONDS in config.",
-                model=canonical_name,
-            )
-
-        except FileNotFoundError as e:
-            # This shouldn't happen due to shutil.which() check, but handle it anyway
-            latency_ms = int((time.perf_counter() - start_time) * 1000)
-            install_hint = self._get_cli_install_hint(cli_command)
-            logger.error(f"[CLI_CALL] {canonical_name} command not found: {e}")
-            return ModelResponse.error_response(
-                error=f"CLI command '{cli_command}' not found. {install_hint}",
-                model=canonical_name,
-            )
-
-        except Exception as e:
-            latency_ms = int((time.perf_counter() - start_time) * 1000)
-
-            # Clean up failed subprocess
-            if process and process.returncode is None:
-                process.kill()
-                try:
-                    await process.communicate()  # Drain pipes to prevent resource leak
-                except Exception:
-                    logger.debug("[CLI_CALL] Error while cleaning up failed CLI process", exc_info=True)
-
-            logger.error(f"[CLI_CALL] {canonical_name} failed with exception: {type(e).__name__}: {e}")
-            logger.debug("[CLI_CALL] Full error details", exc_info=True)
-            return ModelResponse.error_response(
-                error=f"CLI execution failed: {type(e).__name__}: {str(e)}",
-                model=canonical_name,
-            )
-
-    def _parse_cli_output(self, stdout: str, parser_type: str) -> str:
-        """Parse CLI output based on parser type.
-
-        Args:
-            stdout: Raw CLI stdout
-            parser_type: "json", "jsonl", or "text"
-
-        Returns:
-            Parsed content string
-        """
-        if parser_type == "json":
-            # Use existing robust JSON parser (handles malformed JSON)
-            parsed = parse_llm_json(stdout)
-            if parsed is not None:
-                # Extract content based on CLI format
-                if isinstance(parsed, dict):
-                    # Claude CLI format: check for errors first
-                    # {"type":"result","is_error":true/false,"result":"content"}
-                    if "is_error" in parsed and parsed["is_error"]:
-                        # Claude CLI returned an error
-                        error_msg = parsed.get("result", "Unknown error from Claude CLI")
-                        raise ValueError(f"Claude CLI error: {error_msg}")
-
-                    # Gemini CLI format: {"response": "content"}
-                    if "response" in parsed:
-                        return parsed["response"]
-                    # Claude CLI format: {"result": "content"}
-                    elif "result" in parsed:
-                        return parsed["result"]
-                return str(parsed)
-            else:
-                logger.warning("[CLI_PARSE] JSON parse failed, falling back to text")
-                return stdout.strip()
-
-        elif parser_type == "jsonl":
-            # Parse JSONL (one JSON per line, extract text from events)
-            lines = stdout.strip().split("\n")
-            messages = []
-            for line in lines:
-                if not line.strip():
-                    continue
-                try:
-                    event = json.loads(line)
-                    # Handle different event types
-                    if event.get("type") == "text":
-                        text = event.get("text", "")
-                        if text:  # Skip empty text fields
-                            messages.append(text)
-                    elif event.get("type") == "item.completed":
-                        # Codex format: extract text from item
-                        item = event.get("item", {})
-                        if item.get("type") == "agent_message":
-                            text = item.get("text", "")
-                            if text:
-                                messages.append(text)
-                except json.JSONDecodeError:
-                    continue
-            return "\n".join(messages) if messages else stdout.strip()
-
-        else:  # "text" or fallback
-            return stdout.strip()
-
-
-litellm_client = LiteLLMClient()

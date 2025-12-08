@@ -79,7 +79,8 @@ See README.md for CLI usage examples. Note: CLI is experimental.
 **`src/models/`**: Model configuration and LLM integration
 - `config.py` - YAML-based model config with Pydantic validation (`ModelConfig`, `ModelsConfiguration`)
 - `resolver.py` - Model alias resolution with LiteLLM fallback (`ModelResolver`)
-- `litellm_client.py` - Async LLM API calls with config-based resolution (uses LiteLLM responses API)
+- `litellm_client.py` - API model execution via LiteLLM responses API (~260 lines)
+- `cli_executor.py` - CLI model execution via subprocess (~270 lines)
 
 **`config/models.yaml`**: Model definitions
 - Canonical model names with LiteLLM model strings
@@ -120,7 +121,7 @@ See README.md for CLI usage examples. Note: CLI is experimental.
 - `request_logger.py` - LLM API call logging
 - `repository.py` - Repository context builder (loads CLAUDE.md/AGENTS.md from context base_path)
 - `artifacts.py` - Unified artifact saving (uses base_path from context)
-- `llm_runner.py` - LLM execution helpers (execute_single, execute_parallel)
+- `llm_runner.py` - LLM execution helpers with `_route_model_execution()` (routes API models → `litellm_client.execute()`, CLI models → `cli_executor.execute()`)
 - `message_builder.py` - Message construction for LLM API calls
 - `paths.py` - Path resolution and validation (security)
 - `prompts.py` - Expert context builder for code review
@@ -169,7 +170,7 @@ Models are defined in `config/models.yaml`. See README.md for model aliases and 
 - Uses `litellm.aresponses()` instead of `litellm.acompletion()` for unified web search across providers
 - Unified `tools=[{"type": "web_search"}]` parameter works with OpenAI, Azure, Anthropic, Gemini
 - **Limitation**: Only `total_tokens` available (no `prompt_tokens`/`completion_tokens` breakdown)
-- Web search enabled via `enable_web_search=True` parameter in `litellm_client.call_async()`
+- Web search enabled via `enable_web_search=True` parameter in `litellm_client.execute()`
 
 ## Testing Strategy
 

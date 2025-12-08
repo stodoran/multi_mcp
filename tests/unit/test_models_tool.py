@@ -37,7 +37,10 @@ class TestModelsImpl:
     @pytest.mark.asyncio
     async def test_models_impl_returns_model_list(self, sample_config):
         """Test that models_impl returns list of models with credential validation."""
-        with patch("src.tools.models.ModelResolver") as mock_resolver_class, patch("src.tools.models.litellm_client") as mock_client:
+        with (
+            patch("src.tools.models.ModelResolver") as mock_resolver_class,
+            patch("src.tools.models.validate_model_credentials") as mock_validate,
+        ):
             mock_resolver = mock_resolver_class.return_value
             mock_resolver.config = sample_config
             mock_resolver.list_models.return_value = [
@@ -64,7 +67,7 @@ class TestModelsImpl:
             ]
 
             # Mock credential validation to return None (valid)
-            mock_client.validate_model_credentials.return_value = None
+            mock_validate.return_value = None
 
             result = await models_impl()
 
@@ -87,7 +90,10 @@ class TestModelsImpl:
     @pytest.mark.asyncio
     async def test_models_impl_includes_aliases_and_metadata(self, sample_config):
         """Test that returned models include all metadata fields."""
-        with patch("src.tools.models.ModelResolver") as mock_resolver_class, patch("src.tools.models.litellm_client") as mock_client:
+        with (
+            patch("src.tools.models.ModelResolver") as mock_resolver_class,
+            patch("src.tools.models.validate_model_credentials") as mock_validate,
+        ):
             mock_resolver = mock_resolver_class.return_value
             mock_resolver.config = sample_config
             mock_resolver.list_models.return_value = [
@@ -104,7 +110,7 @@ class TestModelsImpl:
             ]
 
             # Mock credential validation
-            mock_client.validate_model_credentials.return_value = None
+            mock_validate.return_value = None
 
             result = await models_impl()
 
@@ -122,7 +128,10 @@ class TestModelsImpl:
     @pytest.mark.asyncio
     async def test_models_impl_excludes_disabled_models(self, sample_config):
         """Test that disabled models are excluded from the list."""
-        with patch("src.tools.models.ModelResolver") as mock_resolver_class, patch("src.tools.models.litellm_client") as mock_client:
+        with (
+            patch("src.tools.models.ModelResolver") as mock_resolver_class,
+            patch("src.tools.models.validate_model_credentials") as mock_validate,
+        ):
             mock_resolver = mock_resolver_class.return_value
             mock_resolver.config = sample_config
             # list_models should return only enabled models
@@ -150,7 +159,7 @@ class TestModelsImpl:
             ]
 
             # Mock credential validation
-            mock_client.validate_model_credentials.return_value = None
+            mock_validate.return_value = None
 
             result = await models_impl()
 
@@ -164,7 +173,10 @@ class TestModelsImpl:
     @pytest.mark.asyncio
     async def test_models_impl_credential_validation_invalid(self, sample_config):
         """Test that invalid credentials are properly marked."""
-        with patch("src.tools.models.ModelResolver") as mock_resolver_class, patch("src.tools.models.litellm_client") as mock_client:
+        with (
+            patch("src.tools.models.ModelResolver") as mock_resolver_class,
+            patch("src.tools.models.validate_model_credentials") as mock_validate,
+        ):
             mock_resolver = mock_resolver_class.return_value
             mock_resolver.config = sample_config
             mock_resolver.list_models.return_value = [
@@ -181,7 +193,7 @@ class TestModelsImpl:
             ]
 
             # Mock credential validation to return an error
-            mock_client.validate_model_credentials.return_value = "OpenAI models require OPENAI_API_KEY to be set"
+            mock_validate.return_value = "OpenAI models require OPENAI_API_KEY to be set"
 
             result = await models_impl()
 
@@ -193,7 +205,10 @@ class TestModelsImpl:
     @pytest.mark.asyncio
     async def test_models_impl_skips_cli_models(self, sample_config):
         """Test that CLI models are skipped for credential validation."""
-        with patch("src.tools.models.ModelResolver") as mock_resolver_class, patch("src.tools.models.litellm_client") as mock_client:
+        with (
+            patch("src.tools.models.ModelResolver") as mock_resolver_class,
+            patch("src.tools.models.validate_model_credentials") as mock_validate,
+        ):
             mock_resolver = mock_resolver_class.return_value
             mock_resolver.config = sample_config
             mock_resolver.list_models.return_value = [
@@ -219,7 +234,7 @@ class TestModelsImpl:
             ]
 
             # Mock credential validation
-            mock_client.validate_model_credentials.return_value = None
+            mock_validate.return_value = None
 
             result = await models_impl()
 
@@ -237,7 +252,10 @@ class TestModelsImpl:
     @pytest.mark.asyncio
     async def test_models_impl_handles_validation_exception(self, sample_config):
         """Test that validation exceptions are handled gracefully."""
-        with patch("src.tools.models.ModelResolver") as mock_resolver_class, patch("src.tools.models.litellm_client") as mock_client:
+        with (
+            patch("src.tools.models.ModelResolver") as mock_resolver_class,
+            patch("src.tools.models.validate_model_credentials") as mock_validate,
+        ):
             mock_resolver = mock_resolver_class.return_value
             mock_resolver.config = sample_config
             mock_resolver.list_models.return_value = [
@@ -254,7 +272,7 @@ class TestModelsImpl:
             ]
 
             # Mock credential validation to raise an exception
-            mock_client.validate_model_credentials.side_effect = AttributeError("Test error")
+            mock_validate.side_effect = AttributeError("Test error")
 
             result = await models_impl()
 
@@ -266,7 +284,10 @@ class TestModelsImpl:
     @pytest.mark.asyncio
     async def test_models_impl_handles_missing_litellm_model(self, sample_config):
         """Test that models without litellm_model get 'unknown' status."""
-        with patch("src.tools.models.ModelResolver") as mock_resolver_class, patch("src.tools.models.litellm_client") as mock_client:
+        with (
+            patch("src.tools.models.ModelResolver") as mock_resolver_class,
+            patch("src.tools.models.validate_model_credentials") as mock_validate,
+        ):
             mock_resolver = mock_resolver_class.return_value
             mock_resolver.config = sample_config
             mock_resolver.list_models.return_value = [
@@ -290,4 +311,4 @@ class TestModelsImpl:
             assert "missing litellm_model" in model["credential_error"]
 
             # Validation should not have been called
-            mock_client.validate_model_credentials.assert_not_called()
+            mock_validate.assert_not_called()

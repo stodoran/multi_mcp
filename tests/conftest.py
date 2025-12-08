@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest
 
 # Load CLI mock fixtures
-pytest_plugins = ["tests.fixtures.cli_mocks"]
+# CLI mocks removed - tests now use CLIExecutor directly
+# pytest_plugins = ["tests.fixtures.cli_mocks"]
 
 # ============================================================================
 # Integration Test Configuration

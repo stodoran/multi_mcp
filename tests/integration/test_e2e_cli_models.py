@@ -327,7 +327,7 @@ async def test_all_three_clis_in_compare():
 async def test_cli_model_invalid_command():
     """Test CLI model with non-existent command returns error."""
     from src.models.config import ModelConfig, get_models_config
-    from src.models.litellm_client import litellm_client
+    from src.utils.llm_runner import execute_single
 
     # Temporarily add a fake CLI model
     config = get_models_config()
@@ -341,7 +341,10 @@ async def test_cli_model_invalid_command():
 
     messages = [{"role": "user", "content": "Hello"}]
 
-    response = await litellm_client.call_async(messages=messages, model="fake-cli")
+    response = await execute_single(
+        model="fake-cli",
+        messages=messages,
+    )
 
     assert response.status == "error"
     assert "fake-cli" in response.metadata.model
