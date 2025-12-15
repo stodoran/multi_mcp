@@ -1,0 +1,4 @@
+include README.md
+include LICENSE
+recursive-include multi_mcp/config *.yaml
+recursive-include multi_mcp/prompts *.md

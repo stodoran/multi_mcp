@@ -1,14 +1,13 @@
 [project]
-name = "multi"
+name = "multi-mcp"
 version = "0.1.0"
-description = "Multi-model AI orchestration server"
+description = "Multi-model AI orchestration MCP server for code review"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [
     {name = "Multi-MCP Team"}
 ]
-
 dependencies = [
     "fastmcp>=2.13",
     "litellm>=1.80",
@@ -19,6 +18,7 @@ dependencies = [
 
 [project.scripts]
 multi = "multi_mcp.cli:main"
+multi-server = "multi_mcp.server:main"
 
 [project.optional-dependencies]
 dev = [
@@ -40,6 +40,10 @@ dev = [
     # Optional tracing
     # "langsmith>=0.1.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/religa/multi-mcp"
+Repository = "https://github.com/religa/multi-mcp"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

@@ -60,6 +60,43 @@ make install
 
 After installation, restart Claude Code and type `/multi` to see available commands.
 
+### Alternative: Pip Install
+
+For users who prefer pip or can't use the install script:
+
+```bash
+# Install from source
+pip install .
+
+# Or with uv
+uv pip install .
+```
+
+**Configure API keys** (create `~/.multi_mcp/.env`):
+
+```bash
+mkdir -p ~/.multi_mcp
+cat > ~/.multi_mcp/.env << 'EOF'
+OPENAI_API_KEY=sk-...
+# ANTHROPIC_API_KEY=sk-ant-...
+# GEMINI_API_KEY=...
+EOF
+chmod 600 ~/.multi_mcp/.env
+```
+
+**Add to Claude Code** (`~/.claude.json`):
+
+```json
+{
+  "mcpServers": {
+    "multi": {
+      "type": "stdio",
+      "command": "multi-server"
+    }
+  }
+}
+```
+
 ## Configuration
 
 **Environment Configuration:**

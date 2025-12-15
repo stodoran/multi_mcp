@@ -121,7 +121,8 @@ async def version_prompt() -> str:
     return "Use the version tool to see server version, configuration details, and available tools."
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Entry point for multi-server CLI command."""
     logging.basicConfig(
         level=getattr(logging, settings.log_level.upper(), logging.INFO),
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -129,3 +130,7 @@ if __name__ == "__main__":
     )
     logger.info(f"[SERVER] Starting {settings.server_name} on stdio")
     mcp.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()

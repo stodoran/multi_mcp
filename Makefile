@@ -1,4 +1,4 @@
-.PHONY: help install install-hooks verify test test-integration test-all clean lint format format-check typecheck check pre-commit server
+.PHONY: help install install-hooks verify test test-integration test-all clean lint format format-check typecheck check pre-commit server build
 
 # Load .env file if it exists
 ifneq (,$(wildcard .env))
@@ -30,7 +30,8 @@ help:
 	@echo "  make typecheck           Run pyright type checker"
 	@echo "  make lint                Run ruff linter"
 	@echo ""
-	@echo "Other:"
+	@echo "Build:"
+	@echo "  make build               Build Python package (sdist + wheel)"
 	@echo "  make clean               Remove build artifacts and cache"
 
 install:
@@ -122,6 +123,11 @@ format:
 typecheck:
 	@echo "Running pyright type checker..."
 	uv run pyright
+
+build:
+	@echo "Building Python package..."
+	uv build
+	@echo "✓ Package built in dist/"
 
 clean:
 	@echo "Cleaning build artifacts and cache..."
