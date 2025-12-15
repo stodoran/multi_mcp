@@ -17,7 +17,7 @@ from multi_mcp.tools.models import models_impl
 from multi_mcp.utils.helpers import get_version
 from multi_mcp.utils.mcp_decorator import mcp_monitor
 from multi_mcp.utils.mcp_factory import create_mcp_wrapper
-from multi_mcp.utils.paths import LOGS_DIR
+from multi_mcp.utils.paths import LOGS_DIR, ensure_logs_dir
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +123,7 @@ async def version_prompt() -> str:
 
 def main() -> None:
     """Entry point for multi-server CLI command."""
+    ensure_logs_dir()  # Create logs directory on first use, not on import
     logging.basicConfig(
         level=getattr(logging, settings.log_level.upper(), logging.INFO),
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

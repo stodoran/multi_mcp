@@ -1,4 +1,5 @@
 include README.md
 include LICENSE
+include multi_mcp/py.typed
 recursive-include multi_mcp/config *.yaml
 recursive-include multi_mcp/prompts *.md

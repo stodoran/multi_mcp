@@ -40,36 +40,16 @@ Multi-MCP acts as an **MCP server** that Claude Code connects to, providing AI-p
 
 **Prerequisites:**
 - Python 3.11+
-- [uv package manager](https://github.com/astral-sh/uv)
 - API key for at least one provider (OpenAI, Anthropic, Google, or OpenRouter)
 
-**Installation:**
+### Install from PyPI (Recommended)
 
 ```bash
-# Clone and install
-git clone https://github.com/religa/multi_mcp.git
-cd multi_mcp
-make install
-
-# The installer will:
-# 1. Install dependencies (uv sync)
-# 2. Generate your .env file
-# 3. Automatically add to Claude Code config (requires jq)
-# 4. Test the installation
-```
-
-After installation, restart Claude Code and type `/multi` to see available commands.
-
-### Alternative: Pip Install
-
-For users who prefer pip or can't use the install script:
-
-```bash
-# Install from source
-pip install .
+# Install with pip
+pip install multi-mcp
 
 # Or with uv
-uv pip install .
+uv pip install multi-mcp
 ```
 
 **Configure API keys** (create `~/.multi_mcp/.env`):
@@ -95,6 +75,25 @@ chmod 600 ~/.multi_mcp/.env
     }
   }
 }
+```
+
+Restart Claude Code and type `/multi` to see available commands.
+
+### Alternative: Install from Source
+
+For development or contributing:
+
+```bash
+# Clone and install
+git clone https://github.com/religa/multi_mcp.git
+cd multi_mcp
+make install
+
+# The installer will:
+# 1. Install dependencies (uv sync)
+# 2. Generate your .env file
+# 3. Automatically add to Claude Code config (requires jq)
+# 4. Test the installation
 ```
 
 ## Configuration

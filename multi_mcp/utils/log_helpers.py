@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from multi_mcp.utils.paths import LOGS_DIR
+from multi_mcp.utils.paths import LOGS_DIR, ensure_logs_dir
 
 _SAFE_ID_RE = re.compile(r"[^A-Za-z0-9_-]")
 
@@ -29,6 +29,8 @@ def write_log_file(
     Creates log file: logs/TIMESTAMP.THREAD_ID.{log_type}.json
     """
     try:
+        ensure_logs_dir()  # Lazy initialization - only create on first write
+
         # Generate filename with timestamp and thread_id
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S_%f")[:-3]  # milliseconds
         safe_id = _SAFE_ID_RE.sub("", thread_id) if thread_id else ""

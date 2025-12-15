@@ -1,20 +1,16 @@
 """General helper functions for the server."""
 
-import tomllib
-from pathlib import Path
+from importlib.metadata import PackageNotFoundError, version
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
 
 def get_version() -> str:
-    """Read version from pyproject.toml."""
+    """Read version from package metadata."""
     try:
-        pyproject_path = Path(__file__).parent.parent.parent / "pyproject.toml"
-        with open(pyproject_path, "rb") as f:
-            data = tomllib.load(f)
-        return data["project"]["version"]
-    except Exception:
+        return version("multi-mcp")
+    except PackageNotFoundError:
         return "unknown"
 
 
