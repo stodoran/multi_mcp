@@ -426,14 +426,14 @@ async def test_compare_archetype_ai_ml_selection(compare_models):
 async def test_compare_web_search_for_pricing():
     """P2: Verify web search is triggered for current pricing questions.
 
-    Uses only gemini-2.5-flash and gpt-5-mini as specified.
+    Uses only gemini-3-flash and gpt-5-mini as specified.
     The compare prompt says: "For cost/pricing: MUST search for current provider pricing"
 
     Note: This test may fail due to web search timeouts in CI environments.
     Web search is inherently slower and may be rate-limited.
     """
     # Use specific models for web search test
-    models = ["gemini-2.5-flash", "gpt-5-mini"]
+    models = ["gemini-3-flash", "gpt-5-mini"]
 
     result = await compare_impl(
         name="Web Search Pricing Test",

@@ -19,8 +19,8 @@ import pytest
 DEFAULT_INTEGRATION_TEST_MODEL = os.getenv("INTEGRATION_TEST_MODEL", "gpt-5-nano")
 
 # Multi-model test configurations
-DEFAULT_COMPARE_MODELS = [DEFAULT_INTEGRATION_TEST_MODEL, "gemini-2.5-flash"]
-DEFAULT_DEBATE_MODELS = ["gpt-5-nano", "gemini-2.5-flash"]  # Different models for real debate diversity
+DEFAULT_COMPARE_MODELS = [DEFAULT_INTEGRATION_TEST_MODEL, "gemini-3-flash"]
+DEFAULT_DEBATE_MODELS = ["gpt-5-nano", "gemini-3-flash"]  # Different models for real debate diversity
 
 
 @pytest.fixture(autouse=True)

@@ -42,51 +42,13 @@ Multi-MCP acts as an **MCP server** that Claude Code connects to, providing AI-p
 - Python 3.11+
 - API key for at least one provider (OpenAI, Anthropic, Google, or OpenRouter)
 
-### Install from PyPI (Recommended)
-
-```bash
-# Install with pip
-pip install multi-mcp
-
-# Or with uv
-uv pip install multi-mcp
-```
-
-**Configure API keys** (create `~/.multi_mcp/.env`):
-
-```bash
-mkdir -p ~/.multi_mcp
-cat > ~/.multi_mcp/.env << 'EOF'
-OPENAI_API_KEY=sk-...
-# ANTHROPIC_API_KEY=sk-ant-...
-# GEMINI_API_KEY=...
-EOF
-chmod 600 ~/.multi_mcp/.env
-```
-
-**Add to Claude Code** (`~/.claude.json`):
-
-```json
-{
-  "mcpServers": {
-    "multi": {
-      "type": "stdio",
-      "command": "multi-server"
-    }
-  }
-}
-```
-
-Restart Claude Code and type `/multi` to see available commands.
-
-### Alternative: Install from Source
-
-For development or contributing:
+### Installation
 
 ```bash
 # Clone and install
 git clone https://github.com/religa/multi_mcp.git
 cd multi_mcp
+# Execute ./scripts/install.sh
 make install
 
 # The installer will:
@@ -96,9 +58,39 @@ make install
 # 4. Test the installation
 ```
 
+**Manual configuration** (if you prefer not to run `make install`):
+
+```bash
+# Install dependencies
+uv sync
+
+# Copy and configure .env
+cp .env.example .env
+# Edit .env with your API keys
+```
+
+Add to Claude Code (`~/.claude.json`), replacing `/path/to/multi_mcp` with your actual clone path:
+
+```json
+{
+  "mcpServers": {
+    "multi": {
+      "type": "stdio",
+      "command": "/path/to/multi_mcp/.venv/bin/python",
+      "args": ["-m", "multi_mcp.server"]
+    }
+  }
+}
+```
+
 ## Configuration
 
-**Environment Configuration:**
+### Environment Configuration (API Keys & Settings)
+
+Multi-MCP loads settings from `.env` files in this order (highest priority first):
+1. **Environment variables** (already set in shell)
+2. **Project `.env`** (current directory or project root)
+3. **User `.env`** (`~/.multi_mcp/.env`) - fallback for pip installs
 
 Edit `.env` with your API keys:
 
@@ -109,10 +101,61 @@ ANTHROPIC_API_KEY=sk-ant-...
 GEMINI_API_KEY=...
 OPENROUTER_API_KEY=sk-or-...
 
+# Azure OpenAI (optional)
+AZURE_API_KEY=...
+AZURE_API_BASE=https://your-resource.openai.azure.com/
+
+# AWS Bedrock (optional)
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION_NAME=us-east-1
+
 # Model Configuration
 DEFAULT_MODEL=gpt-5-mini
-DEFAULT_MODEL_LIST=gpt-5-mini,gemini-2.5-flash
+DEFAULT_MODEL_LIST=gpt-5-mini,gemini-3-flash
 ```
+
+### Model Configuration (Adding Custom Models)
+
+Models are defined in YAML configuration files (user config wins):
+1. **Package defaults**: `multi_mcp/config/config.yaml` (bundled with package)
+2. **User overrides**: `~/.multi_mcp/config.yaml` (optional, takes precedence)
+
+To add your own models, create `~/.multi_mcp/config.yaml` (see [`config.yaml`](multi_mcp/config/config.yaml) and [`config.override.example.yaml`](multi_mcp/config/config.override.example.yaml) for examples):
+
+```yaml
+version: "1.0"
+
+models:
+  # Add a new API model
+  my-custom-gpt:
+    litellm_model: openai/gpt-4o
+    aliases:
+      - custom
+    notes: "My custom GPT-4o configuration"
+
+  # Add a custom CLI model
+  my-local-llm:
+    provider: cli
+    cli_command: ollama
+    cli_args:
+      - "run"
+      - "llama3.2"
+    cli_parser: text
+    aliases:
+      - local
+    notes: "Local LLaMA via Ollama"
+
+  # Override an existing model's settings
+  gpt-5-mini:
+    constraints:
+      temperature: 0.5  # Override default temperature
+```
+
+**Merge behavior:**
+- New models are added alongside package defaults
+- Existing models are merged (your settings override package defaults)
+- Aliases can be "stolen" from package models to your custom models
 
 ## Usage Examples
 
@@ -168,51 +211,51 @@ Use short aliases instead of full model names:
 | Alias | Model | Provider |
 |-------|-------|----------|
 | `mini` | gpt-5-mini | OpenAI |
+| `nano` | gpt-5-nano | OpenAI |
+| `gpt` | gpt-5.2 | OpenAI |
+| `codex` | gpt-5.1-codex | OpenAI |
 | `sonnet` | claude-sonnet-4.5 | Anthropic |
-| `gpt` | gpt-5.1 | OpenAI |
+| `haiku` | claude-haiku-4.5 | Anthropic |
+| `opus` | claude-opus-4.5 | Anthropic |
 | `gemini` | gemini-3-pro-preview | Google |
-| `flash` | gemini-2.5-flash | Google |
+| `flash` | gemini-3-flash | Google |
+| `azure-mini` | azure-gpt-5-mini | Azure |
+| `bedrock-sonnet` | bedrock-claude-4-5-sonnet | AWS |
+
+Run `multi:models` to see all available models and aliases.
 
 ## CLI Models
 
-Multi-MCP can execute **CLI-based AI models** (like Gemini CLI or Codex CLI) alongside API models. CLI models run as subprocesses and work seamlessly with all existing tools.
+Multi-MCP can execute **CLI-based AI models** (like Gemini CLI, Codex CLI, or Claude CLI) alongside API models. CLI models run as subprocesses and work seamlessly with all existing tools.
 
 **Benefits:**
 - Use models with full tool access (file operations, shell commands)
 - Mix API and CLI models in `compare` and `debate` workflows
 - Leverage local CLIs without API overhead
 
-**Configuration:**
+**Built-in CLI Models:**
+- `gemini-cli` (alias: `gem-cli`) - Gemini CLI with auto-edit mode
+- `codex-cli` (alias: `cx-cli`) - Codex CLI with full-auto mode
+- `claude-cli` (alias: `cl-cli`) - Claude CLI with acceptEdits mode
 
-CLI models are defined in `multi_mcp/config/config.yaml` with `provider: cli`:
+**Adding Custom CLI Models:**
+
+Add to `~/.multi_mcp/config.yaml` (see [Model Configuration](#model-configuration-adding-custom-models)):
 
 ```yaml
-gemini-cli:
-  provider: cli
-  cli_command: gemini
-  cli_args:
-    - "-o"
-    - "json"
-    - "--yolo"
-  cli_env:
-    GEMINI_API_KEY: "${GEMINI_API_KEY}"
-  cli_parser: json
-  aliases:
-    - gem-cli
-  notes: "Gemini CLI with full tool access"
+version: "1.0"
 
-codex-cli:
-  provider: cli
-  cli_command: codex
-  cli_args:
-    - "exec"
-    - "--json"
-    - "--dangerously-bypass-approvals-and-sandbox"
-  cli_env: {}
-  cli_parser: jsonl
-  aliases:
-    - cx-cli
-  notes: "Codex CLI with full tool access"
+models:
+  my-ollama:
+    provider: cli
+    cli_command: ollama
+    cli_args:
+      - "run"
+      - "codellama"
+    cli_parser: text  # "json", "jsonl", or "text"
+    aliases:
+      - ollama
+    notes: "Local CodeLlama via Ollama"
 ```
 
 **Prerequisites:**
@@ -220,11 +263,14 @@ codex-cli:
 CLI models require the respective CLI tools to be installed:
 
 ```bash
-# Install Gemini CLI
-pip install google-generativeai-cli
+# Gemini CLI
+npm install -g @anthropic-ai/gemini-cli
 
-# Install Codex CLI (Claude Code CLI)
-npm install -g @anthropics/codex-cli
+# Codex CLI
+npm install -g @openai/codex
+
+# Claude CLI
+npm install -g @anthropic-ai/claude-code
 ```
 
 ## CLI Usage (Experimental)

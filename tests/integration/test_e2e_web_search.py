@@ -47,7 +47,7 @@ async def test_compare_with_web_search():
         step_number=1,
         next_action="stop",
         base_path="/tmp",
-        models=["gpt-5-mini", "gemini-2.5-flash"],  # Both have web search support
+        models=["gpt-5-mini", "gemini-3-flash"],  # Both have web search support
         thread_id=str(uuid.uuid4()),
     )
 
@@ -76,7 +76,7 @@ async def test_debate_step1_with_web_search():
         step_number=1,
         next_action="stop",
         base_path="/tmp",
-        models=["gpt-5-mini", "gemini-2.5-flash"],  # Both have web search support
+        models=["gpt-5-mini", "gemini-3-flash"],  # Both have web search support
         thread_id=str(uuid.uuid4()),
     )
 
@@ -135,7 +135,7 @@ async def test_web_search_with_factual_question():
         step_number=1,
         next_action="stop",
         base_path="/tmp",
-        model="gemini-2.5-flash",  # Model with web search support
+        model="gemini-3-flash",  # Model with web search support
         thread_id=str(uuid.uuid4()),
     )
 
@@ -186,7 +186,7 @@ async def test_web_search_with_gemini():
         step_number=1,
         next_action="stop",
         base_path="/tmp",
-        model="gemini-2.5-flash",  # Google model with web search
+        model="gemini-3-flash",  # Google model with web search
         thread_id=str(uuid.uuid4()),
     )
 
@@ -208,7 +208,7 @@ async def test_chat_web_search_includes_citations():
         step_number=1,
         next_action="stop",
         base_path="/tmp",
-        model="gemini-2.5-flash",  # Model with web search support
+        model="gemini-3-flash",  # Model with web search support
         thread_id=str(uuid.uuid4()),
     )
 
@@ -255,7 +255,7 @@ async def test_compare_web_search_includes_citations():
         step_number=1,
         next_action="stop",
         base_path="/tmp",
-        models=["gemini-2.5-flash", "gpt-5-mini"],  # Both have web search
+        models=["gemini-3-flash", "gpt-5-mini"],  # Both have web search
         thread_id=str(uuid.uuid4()),
     )
 
@@ -313,7 +313,7 @@ async def test_chat_without_web_search_cites_context():
         step_number=1,
         next_action="stop",
         base_path="/tmp",
-        model="gemini-2.5-flash",
+        model="gemini-3-flash",
         thread_id=str(uuid.uuid4()),
     )
 

@@ -58,7 +58,7 @@ class TestDefaultModelListParsing:
         """Test empty string falls back to default."""
         monkeypatch.setenv("DEFAULT_MODEL_LIST", "")
         settings = Settings()
-        assert settings.default_model_list == ["gpt-5-mini", "gemini-2.5-flash"]
+        assert settings.default_model_list == ["gpt-5-mini", "gemini-3-flash"]
 
     def test_no_env_var_uses_default(self, monkeypatch, tmp_path):
         """Test that default value is used when env var not set."""
@@ -71,7 +71,7 @@ class TestDefaultModelListParsing:
         monkeypatch.chdir(tmp_path)
 
         settings = Settings()
-        assert settings.default_model_list == ["gpt-5-mini", "gemini-2.5-flash"]
+        assert settings.default_model_list == ["gpt-5-mini", "gemini-3-flash"]
 
     def test_full_model_names(self, monkeypatch):
         """Test with full model names instead of aliases."""

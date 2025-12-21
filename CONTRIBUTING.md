@@ -151,7 +151,7 @@ make test-all
 uv run pytest tests/unit/ --cov=multi_mcp --cov-report=html
 ```
 
-**Note:** Integration tests require at least one API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or OPENROUTER_API_KEY) and make real API calls which cost money. They are **disabled in CI** to save costs. We use low-cost models (gpt-5-mini, gemini-2.5-flash) for testing.
+**Note:** Integration tests require at least one API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or OPENROUTER_API_KEY) and make real API calls which cost money. They are **disabled in CI** to save costs. We use low-cost models (gpt-5-mini, gemini-3-flash) for testing.
 
 **Parallel Execution:** Integration tests can run in parallel using `pytest-xdist` (`-n auto`), but currently run sequentially by default. Tests use unique thread IDs (UUIDs) so they don't conflict.
 

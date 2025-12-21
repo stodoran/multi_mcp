@@ -111,13 +111,13 @@ models:
       - gemini-2
     notes: "High-quality Google model with grounding"
 
-  gemini-2.5-flash:
-    litellm_model: gemini/gemini-2.5-flash
-    provider_web_search: true  # LiteLLM handles web search automatically
+  gemini-3-flash:
+    litellm_model: gemini/gemini-3-flash-preview
+    provider_web_search: true
     aliases:
       - gemini-flash
       - flash
-    notes: "Fast and cheap with grounding"
+    notes: "Fastest Gemini 3 model"
 
   gemini-3-pro-preview:
     litellm_model: gemini/gemini-3-pro-preview

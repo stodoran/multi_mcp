@@ -229,7 +229,7 @@ Models are defined in `multi_mcp/config/config.yaml`. See README.md for model al
 - **File Operations**: Use Claude Code's Read/Write tools, NOT Bash(cat > dir/file.ex << 'EOF')
 - **Running Python scripts**: Use Claude Code's Read/Write tools to generate files in `tmp/` and execute with `uv run python tmp/file_name.py`
 - **Complex Scripts**: Write to `tmp/` directory first, then execute
-- **Live Testing**: Always use low-cost models (gpt-5-mini, claude-haiku-4-5-20251001, gemini-2.5-flash) for rapid iteration
+- **Live Testing**: Always use low-cost models (gpt-5-mini, claude-haiku-4-5-20251001, gemini-3-flash) for rapid iteration
 - **Deterministic Patterns**: Prefer checklist-based guidance over LLM-generated suggestions for intermediate steps
 - **Testing**: ALWAYS test after making bigger changes - run `uv run pytest tests/unit/` (fast) or `RUN_E2E=1 uv run pytest` (full)
 - **Git Commits**: Ensure all tests pass `make test-all` and code is linted `make check` before committing
