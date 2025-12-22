@@ -1,4 +1,4 @@
-.PHONY: help install install-hooks verify test test-integration test-all clean lint format format-check typecheck check pre-commit server build publish publish-test
+.PHONY: help install install-hooks verify test test-integration test-all clean lint format format-check typecheck check pre-commit server build publish publish-test publish-mcp
 
 # Load .env file if it exists
 ifneq (,$(wildcard .env))
@@ -34,6 +34,7 @@ help:
 	@echo "  make build               Build Python package (sdist + wheel)"
 	@echo "  make publish-test        Upload to TestPyPI (for testing)"
 	@echo "  make publish             Upload to PyPI (production release)"
+	@echo "  make publish-mcp         Publish to MCP Registry (requires mcp-publisher)"
 	@echo "  make clean               Remove build artifacts and cache"
 
 install:
@@ -144,6 +145,21 @@ publish: build
 	@echo "Install with:"
 	@echo "  pip install multi-mcp"
 	@echo "  claude mcp add multi -- uvx multi-mcp"
+
+publish-mcp:
+	@echo "Publishing to MCP Registry..."
+	@if ! command -v mcp-publisher >/dev/null 2>&1; then \
+		echo "ERROR: mcp-publisher not found. Install with: brew install modelcontextprotocol/mcp/mcp-publisher"; \
+		exit 1; \
+	fi
+	@if [ ! -f "server.json" ]; then \
+		echo "ERROR: server.json not found. Create it with: mcp-publisher init"; \
+		exit 1; \
+	fi
+	mcp-publisher publish
+	@echo "✓ Published to MCP Registry!"
+	@echo ""
+	@echo "View at: https://registry.modelcontextprotocol.io"
 
 clean:
 	@echo "Cleaning build artifacts and cache..."

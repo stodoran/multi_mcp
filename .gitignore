@@ -94,3 +94,6 @@ ref/
 
 # GitHub
 .github/workflows/secrets.yml
+
+# MCP Registry tokens
+.mcpregistry_*

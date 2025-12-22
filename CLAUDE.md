@@ -52,6 +52,37 @@ ls -lh logs/*.mcp.json
 cat logs/*.mcp.json | jq .
 ```
 
+## Building & Publishing to PyPI
+
+**Package**: https://pypi.org/project/multi-mcp/
+
+```bash
+# Build package (creates dist/*.whl and dist/*.tar.gz)
+make build
+
+# Publish to TestPyPI (for testing)
+make publish-test
+
+# Publish to PyPI (production)
+make publish
+
+# Clean build artifacts before rebuilding
+make clean
+```
+
+**Version Management:**
+- Version is in `pyproject.toml` (line 3): `version = "X.Y.Z"`
+- Bump version before publishing (PyPI doesn't allow re-uploading same version)
+- Entry points: `multi` (CLI), `multi-server` (MCP server), `multi-mcp` (MCP server alias for uvx)
+
+**User Installation:**
+```bash
+pip install multi-mcp
+claude mcp add multi -- uvx multi-mcp
+```
+
+**Automated Publishing:** See `docs/github-pypi-v1.md` for GitHub Actions workflow plan.
+
 ## Installation & Setup
 
 See README.md for installation instructions and environment setup.

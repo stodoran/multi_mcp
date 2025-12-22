@@ -1,0 +1,60 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.religa/multi-mcp",
+  "title": "Multi-MCP",
+  "description": "Parallel multi model code review, security analysis and AI debate with ChatGPT, Claude and Gemini.",
+  "repository": {
+    "url": "https://github.com/religa/multi_mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/religa/multi_mcp#readme",
+  "version": "0.1.1",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "multi-mcp",
+      "version": "0.1.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "OPENAI_API_KEY",
+          "description": "OpenAI API key for GPT models (optional - at least one provider required)",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "description": "Anthropic API key for Claude models (optional - at least one provider required)",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "GEMINI_API_KEY",
+          "description": "Google API key for Gemini models (optional - at least one provider required)",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "OPENROUTER_API_KEY",
+          "description": "OpenRouter API key for additional models (optional)",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "DEFAULT_MODEL",
+          "description": "Default model to use (defaults to gpt-5-mini)",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "DEFAULT_MODEL_LIST",
+          "description": "Default models for multi-model comparison (comma-separated, defaults to gpt-5-mini,gemini-3-flash)",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}
