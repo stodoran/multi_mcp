@@ -1,5 +1,7 @@
 # Multi-MCP: Multi-Model Code Review and Analysis MCP Server for Claude Code
 
+<!-- mcp-name: io.github.religa/multi-mcp -->
+
 [![CI](https://github.com/religa/multi_mcp/workflows/CI/badge.svg)](https://github.com/religa/multi_mcp/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
