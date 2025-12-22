@@ -1,4 +1,4 @@
-.PHONY: help install install-hooks verify test test-integration test-all clean lint format format-check typecheck check pre-commit server build
+.PHONY: help install install-hooks verify test test-integration test-all clean lint format format-check typecheck check pre-commit server build publish publish-test
 
 # Load .env file if it exists
 ifneq (,$(wildcard .env))
@@ -30,8 +30,10 @@ help:
 	@echo "  make typecheck           Run pyright type checker"
 	@echo "  make lint                Run ruff linter"
 	@echo ""
-	@echo "Build:"
+	@echo "Build & Publish:"
 	@echo "  make build               Build Python package (sdist + wheel)"
+	@echo "  make publish-test        Upload to TestPyPI (for testing)"
+	@echo "  make publish             Upload to PyPI (production release)"
 	@echo "  make clean               Remove build artifacts and cache"
 
 install:
@@ -128,6 +130,20 @@ build:
 	@echo "Building Python package..."
 	uv build
 	@echo "✓ Package built in dist/"
+
+publish-test: build
+	@echo "Uploading to TestPyPI..."
+	@echo "Test install with: pip install --index-url https://test.pypi.org/simple/ multi-mcp"
+	uv run twine upload --repository testpypi dist/*
+
+publish: build
+	@echo "Uploading to PyPI..."
+	uv run twine upload dist/*
+	@echo "✓ Published to PyPI!"
+	@echo ""
+	@echo "Install with:"
+	@echo "  pip install multi-mcp"
+	@echo "  claude mcp add multi -- uvx multi-mcp"
 
 clean:
 	@echo "Cleaning build artifacts and cache..."
