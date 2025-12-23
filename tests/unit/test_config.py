@@ -89,8 +89,9 @@ class TestDefaultModelListParsing:
 class TestOtherConfigSettings:
     """Test other configuration settings."""
 
-    def test_default_model(self):
+    def test_default_model(self, monkeypatch):
         """Test default_model default value."""
+        monkeypatch.delenv("DEFAULT_MODEL", raising=False)
         settings = Settings()
         assert settings.default_model == "gpt-5-mini"
 

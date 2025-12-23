@@ -101,7 +101,8 @@ test-integration:
 		echo "Set at least one: export OPENAI_API_KEY='sk-...'"; \
 		exit 1; \
 	fi
-	RUN_E2E=1 uv run pytest tests/integration/ -n auto -v
+	# RUN_E2E=1 uv run pytest tests/integration/ -n auto -v
+	RUN_E2E=1 uv run pytest tests/integration/ -v
 
 test-all:
 	@echo "Running all tests (unit + integration in parallel)..."
@@ -111,7 +112,7 @@ test-all:
 		exit 1; \
 	fi
 	uv run pytest tests/unit/ -v
-	RUN_E2E=1 uv run pytest tests/integration/ -n auto -v
+	RUN_E2E=1 uv run pytest tests/integration/ -v
 	@echo "✓ All tests passed!"
 
 lint:
