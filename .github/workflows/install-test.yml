@@ -6,12 +6,16 @@ on:
     paths:
       - 'multi_mcp/**'
       - 'pyproject.toml'
+      - 'Makefile'
+      - 'scripts/install.sh'
       - '.github/workflows/install-test.yml'
   pull_request:
     branches: [main]
     paths:
       - 'multi_mcp/**'
       - 'pyproject.toml'
+      - 'Makefile'
+      - 'scripts/install.sh'
       - '.github/workflows/install-test.yml'
   release:
     types: [published]
@@ -77,6 +81,59 @@ jobs:
     - name: Test package metadata
       run: |
         python -c "import importlib.metadata; v = importlib.metadata.version('multi-mcp'); print(f'Version: {v}')"
+
+  # Test make install (developer setup from git clone)
+  test-make-install:
+    name: Make Install - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Skip Windows - install.sh is a bash script
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+
+    - name: Install Python 3.13
+      run: uv python install 3.13
+
+    - name: Run make install (non-interactive)
+      run: |
+        make install
+      env:
+        # CI=true triggers non-interactive mode in install.sh
+        CI: true
+        # Pin Python version (macOS has Python 3.14 which is unsupported)
+        UV_PYTHON: "3.13"
+
+    - name: Verify .venv was created
+      run: |
+        test -d .venv
+        echo "✓ .venv directory exists"
+
+    - name: Verify .env was created
+      run: |
+        test -f .env
+        echo "✓ .env file exists"
+
+    - name: Verify server module loads
+      run: |
+        .venv/bin/python -c "from multi_mcp.server import mcp; print(f'✓ Server module loads: {mcp}')"
+
+    - name: Verify CLI entry points in venv
+      run: |
+        .venv/bin/python -m multi_mcp.cli --help
+        .venv/bin/python -m multi_mcp.server --help
+
+    - name: Run make verify
+      run: |
+        make verify
 
   # Test installation from PyPI (pip install multi-mcp)
   test-pypi-install:
@@ -157,13 +214,17 @@ jobs:
   install-test-summary:
     name: Installation Tests Summary
     runs-on: ubuntu-latest
-    needs: [test-git-install]
+    needs: [test-git-install, test-make-install]
     if: always()
     steps:
     - name: Check results
       run: |
         if [ "${{ needs.test-git-install.result }}" != "success" ]; then
           echo "Git install tests failed"
+          exit 1
+        fi
+        if [ "${{ needs.test-make-install.result }}" != "success" ]; then
+          echo "Make install tests failed"
           exit 1
         fi
         echo "All installation tests passed!"

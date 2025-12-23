@@ -128,6 +128,11 @@ create_venv() {
 
     if [[ -d "$VENV_PATH" ]]; then
         print_warning "Virtual environment already exists at $VENV_PATH"
+        # In CI/non-interactive mode, reuse existing venv (safer than deleting)
+        if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
+            print_info "Using existing venv (non-interactive mode)"
+            return 0
+        fi
         read -p "Remove and recreate? (y/N): " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -154,6 +159,11 @@ setup_env_file() {
 
     if [[ -f "$ENV_FILE" ]]; then
         print_warning "Found existing $ENV_FILE"
+        # In CI/non-interactive mode, keep existing .env (don't overwrite)
+        if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
+            print_success "Keeping existing $ENV_FILE (non-interactive mode)"
+            return 0
+        fi
         read -p "Keep existing configuration? (Y/n): " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
@@ -223,6 +233,13 @@ sync_env_keys() {
     # Prompt user with context (show which keys will be synced)
     echo "" >&2
     print_info "Found $count API key(s) in environment: ${available_keys[*]}"
+
+    # In CI/non-interactive mode, skip syncing (safer - don't modify files without explicit consent)
+    if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
+        print_info "Skipping key sync (non-interactive mode)"
+        return 0
+    fi
+
     read -p "Sync these to $env_file? (Y/n): " -n 1 -r
     echo
 
@@ -235,9 +252,11 @@ sync_env_keys() {
     # Perform sync using temp file for atomicity
     local temp_file
     temp_file=$(mktemp)
+    local temp_file2
+    temp_file2=$(mktemp)
 
     # Set up cleanup trap (use ${var:-} to avoid unbound variable errors with set -u)
-    trap 'rm -f "${temp_file:-}" "${temp_file:-}.bak" 2>/dev/null || true' RETURN
+    trap 'rm -f "${temp_file:-}" "${temp_file2:-}" 2>/dev/null || true' RETURN
 
     cp "$env_file" "$temp_file"
 
@@ -247,15 +266,14 @@ sync_env_keys() {
         val=$(get_env_value "$key")
 
         # Handle both commented and uncommented lines
-        sed -i.bak "s@^# *${key}=.*@${key}=${val}@; s@^${key}=.*@${key}=${val}@" "$temp_file"
+        # Use portable sed without -i (avoids macOS vs Linux incompatibility)
+        sed "s@^# *${key}=.*@${key}=${val}@; s@^${key}=.*@${key}=${val}@" "$temp_file" > "$temp_file2"
+        mv "$temp_file2" "$temp_file"
 
         print_success "Synced $key"
     done
 
     mv "$temp_file" "$env_file"
-
-    # Cleanup backup file
-    rm -f "${temp_file}.bak"
 
     echo "" >&2
     print_success "Synced $count API key(s) to $env_file"
@@ -318,6 +336,11 @@ update_claude_code_allowlist() {
     # Check if jq is available
     if ! command -v jq &> /dev/null; then
         print_warning "jq not found - cannot update Claude Code allowlist"
+        # In CI, this is an error since we have settings but can't update them
+        if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
+            print_error "Install jq to update Claude Code allowlist in CI"
+            return 1
+        fi
         return 0
     fi
 
@@ -425,6 +448,11 @@ update_mcp_config_file() {
         # Check if multi server already exists
         if jq -e '.mcpServers.multi' "$config_path" &> /dev/null; then
             print_warning "Found existing 'multi' server in $config_name config"
+            # In CI/non-interactive mode, keep existing config (don't overwrite)
+            if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
+                print_info "Keeping existing configuration (non-interactive mode)"
+                return 0
+            fi
             read -p "Overwrite existing configuration? (y/N): " -n 1 -r
             echo
             if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -528,6 +556,12 @@ generate_mcp_config() {
     local server_path="multi_mcp.server"
 
     print_header "MCP Client Configuration"
+
+    # Skip interactive configuration in CI/non-interactive mode
+    if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
+        print_info "Skipping MCP client configuration (non-interactive mode)"
+        return 0
+    fi
 
     # Try to automatically configure Claude Desktop
     echo "" >&2
@@ -666,16 +700,20 @@ setup_user_env() {
         return 0
     fi
 
-    # Ask user (skip in non-interactive mode)
-    if [[ "${NON_INTERACTIVE:-}" != "1" ]]; then
-        echo "" >&2
-        print_info "User .env stores API keys for pip install users"
-        read -p "Create user .env at $user_env_file? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            print_info "Skipping user .env (you can create it later)"
-            return 0
-        fi
+    # In CI/non-interactive mode, skip creating user .env (avoid polluting home directory)
+    if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
+        print_info "Skipping user .env creation (non-interactive mode)"
+        return 0
+    fi
+
+    # Ask user
+    echo "" >&2
+    print_info "User .env stores API keys for pip install users"
+    read -p "Create user .env at $user_env_file? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_info "Skipping user .env (you can create it later)"
+        return 0
     fi
 
     # Copy .env template from static example file
@@ -708,20 +746,27 @@ setup_user_config() {
         return 0
     fi
 
-    # Ask user (skip in non-interactive mode)
-    if [[ "${NON_INTERACTIVE:-}" != "1" ]]; then
-        echo "" >&2
-        print_info "User config allows customizing models and settings"
-        read -p "Create user config template at $user_config_file? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            print_info "Skipping user config (you can create it later)"
-            return 0
-        fi
+    # In CI/non-interactive mode, skip creating user config (avoid polluting home directory)
+    if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
+        print_info "Skipping user config creation (non-interactive mode)"
+        return 0
+    fi
+
+    # Ask user
+    echo "" >&2
+    print_info "User config allows customizing models and settings"
+    read -p "Create user config template at $user_config_file? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_info "Skipping user config (you can create it later)"
+        return 0
     fi
 
     # Copy config template from static example file
     print_info "Creating user config template..."
+
+    # Create directory if it doesn't exist
+    mkdir -p "$user_config_dir"
 
     if cp multi_mcp/config/config.override.example.yaml "$user_config_file" && chmod 600 "$user_config_file"; then
         print_success "Created user config template at $user_config_file"
