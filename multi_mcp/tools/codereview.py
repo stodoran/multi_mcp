@@ -92,6 +92,7 @@ Complete this checklist, then call step 2 with your findings and relevant_files.
             thread_id=thread_id,
             summary=checklist_content,
             next_action=NextAction(action="continue", reason="Complete checklist, then proceed to step 2"),
+            intent="codereview",
         )
         return result.model_dump(exclude_none=True)
 
@@ -118,6 +119,7 @@ Complete this checklist, then call step 2 with your findings and relevant_files.
                 action="continue",
                 reason="Add file paths to `relevant_files` parameter and retry with the same step_number",
             ),
+            intent="codereview",
         )
         return result.model_dump(exclude_none=True)
 
@@ -274,6 +276,7 @@ Complete this checklist, then call step 2 with your findings and relevant_files.
             summary=aggregate_summary,
             results=[consolidated_result],  # Single consolidated result
             next_action=next_action_obj,
+            intent="codereview",
         )
 
     else:
@@ -400,6 +403,7 @@ Complete this checklist, then call step 2 with your findings and relevant_files.
             summary=aggregate_summary,
             results=parsed_results,
             next_action=next_action_obj,
+            intent="codereview",
         )
 
     return result.model_dump(exclude_none=True)

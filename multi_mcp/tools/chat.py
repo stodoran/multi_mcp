@@ -54,6 +54,7 @@ async def chat_impl(
             thread_id=thread_id,
             error=model_response.error,
             metadata=model_response.metadata,
+            intent="chat",
         ).model_dump(exclude_none=True)
 
     logger.info(f"[CHAT] Response - tokens={model_response.metadata.total_tokens} latency={model_response.metadata.latency_ms}ms")
@@ -79,6 +80,7 @@ async def chat_impl(
         content=response_content,
         status=response_status,
         metadata=model_response.metadata,
+        intent="chat",
     )
 
     return result.model_dump(exclude_none=True)

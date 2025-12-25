@@ -70,8 +70,20 @@ You have access to:
 - 🟡 **MEDIUM:** Performance issues, error handling gaps
 - 🟢 **LOW:** Code quality, maintainability, style
 
+# INTENT CLASSIFICATION
+Identify the query intent from the archetype list and include it at the start of your response.
+
+**Archetypes:** infrastructure, framework, architecture, devops, api_design, data_storage, testing, security, deployment, caching, cicd_pipeline, code_review, debugging, refactoring, system_design, ai_ml_selection, build_vs_buy, team_process, factual, data_analysis, creative, general
+
+**Required format** (MUST be first line of response):
+**Intent:** `<archetype>`
+
+Example: **Intent:** `architecture`
+
 # OUTPUT FORMAT (MANDATORY)
 Format your response exactly using these sections in markdown:
+
+**Intent:** `<archetype>`
 
 **# 🥇 [Concise Title]: Use [Approach Name]**
 > ✅ **Verdict:** [One-sentence justification with emoji verdict 🟢/🟡/🔴]

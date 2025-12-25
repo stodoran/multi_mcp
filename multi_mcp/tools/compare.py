@@ -7,6 +7,7 @@ from multi_mcp.memory.store import make_model_thread_id, store_conversation_turn
 from multi_mcp.prompts import COMPARE_PROMPT
 from multi_mcp.schemas.base import ModelResponse
 from multi_mcp.schemas.compare import CompareResponse
+from multi_mcp.utils.intent import extract_intent
 from multi_mcp.utils.llm_runner import execute_parallel
 from multi_mcp.utils.message_builder import MessageBuilder
 
@@ -79,11 +80,21 @@ async def compare_impl(
         status = "error"
         summary = f"Compare failed: all {len(results)} models failed"
 
-    logger.info(f"[COMPARE] Complete: {successes}/{len(results)} models succeeded")
+    # Extract intent from first successful response
+    intent: str | None = None
+    for r in results:
+        if r.status == "success":
+            intent = extract_intent(r.content, default="compare")
+            break
+    if intent is None:
+        intent = "compare"
+
+    logger.info(f"[COMPARE] Complete: {successes}/{len(results)} models succeeded, intent={intent}")
 
     return CompareResponse(
         thread_id=thread_id,
         status=status,  # type: ignore[arg-type]
         summary=summary,
         results=results,
+        intent=intent,
     ).model_dump(exclude_none=True)

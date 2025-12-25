@@ -173,10 +173,17 @@ class SingleToolResponse(ModelResponse):
     thread_id: str = Field(..., description="Thread identifier")
     status: Literal["success", "in_progress", "error"] = Field(..., description="Response status")
     next_action: NextAction | None = Field(default=None, description="Server hint for next step")
+    intent: str | None = Field(default=None, description="Query intent/archetype (e.g., 'codereview', 'chat')")
 
     @classmethod
     def error_response(
-        cls, thread_id: str, error: str | None = None, content: str = "", next_action=None, metadata: ModelResponseMetadata | None = None
+        cls,
+        thread_id: str,
+        error: str | None = None,
+        content: str = "",
+        next_action=None,
+        metadata: ModelResponseMetadata | None = None,
+        intent: str | None = None,
     ) -> "ModelResponse":
         """Create an error response with default values."""
         if metadata is None:
@@ -190,6 +197,7 @@ class SingleToolResponse(ModelResponse):
             next_action=next_action,
             error=error,
             metadata=metadata,
+            intent=intent,
         )
 
 
@@ -204,3 +212,4 @@ class MultiToolResponse(BaseModel):
         description="Overall status: 'success' (all succeeded), 'in_progress' (some still running), 'partial' (some failed), 'error' (all failed)",
     )
     next_action: NextAction | None = Field(default=None, description="Server hint for next step")
+    intent: str | None = Field(default=None, description="Query intent/archetype (e.g., 'framework', 'debugging')")

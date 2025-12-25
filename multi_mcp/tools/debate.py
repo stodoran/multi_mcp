@@ -6,6 +6,7 @@ from typing import Literal
 from multi_mcp.prompts import DEBATE_STEP1_PROMPT, DEBATE_STEP2_PROMPT
 from multi_mcp.schemas.base import ModelResponse, MultiToolResponse
 from multi_mcp.schemas.debate import DebateResponse
+from multi_mcp.utils.intent import extract_intent
 from multi_mcp.utils.llm_runner import execute_parallel
 from multi_mcp.utils.message_builder import MessageBuilder
 
@@ -83,6 +84,7 @@ async def debate_impl(
             status="error",
             summary=f"Debate failed: all {len(models)} models failed in Step 1",
             results=step1_results,
+            intent="debate",
         ).model_dump(exclude_none=True)
 
     logger.info(f"[DEBATE:STEP1] Complete: {step1_successes}/{len(models)} succeeded")
@@ -121,7 +123,16 @@ async def debate_impl(
         status = "error"
         summary = f"Debate error: Step 2 failed for all {len(successful_models)} models"
 
-    logger.info(f"[DEBATE] {summary}")
+    # Extract intent from first successful Step 1 response
+    intent: str | None = None
+    for r in step1_results:
+        if r.status == "success":
+            intent = extract_intent(r.content, default="debate")
+            break
+    if intent is None:
+        intent = "debate"
+
+    logger.info(f"[DEBATE] {summary}, intent={intent}")
 
     response = DebateResponse(
         thread_id=thread_id,
@@ -129,6 +140,7 @@ async def debate_impl(
         summary=summary,
         results=step1_results,  # Step 1 independent answers
         step2_results=step2_results,  # Step 2 debate responses
+        intent=intent,
     )
 
     return response.model_dump(exclude_none=True)
