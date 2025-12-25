@@ -169,7 +169,7 @@ def main() -> int:
         return 2
 
     issues = []
-    if "results" in result and result["results"]:
+    if result.get("results"):
         for model_result in result["results"]:
             if model_result.get("issues_found"):
                 issues.extend(model_result["issues_found"])

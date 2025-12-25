@@ -248,9 +248,8 @@ def semantic_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, 
 def load_package_config() -> dict[str, Any]:
     """Load package config using importlib.resources (safe for wheels)."""
     pkg_file = get_package_config_path()
-    with as_file(pkg_file) as path:
-        with open(path, encoding="utf-8") as f:
-            return yaml.safe_load(f)
+    with as_file(pkg_file) as path, open(path, encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 
 def load_user_config() -> dict[str, Any] | None:

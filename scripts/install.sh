@@ -59,6 +59,21 @@ get_script_dir() {
     cd "$(dirname "$0")/.." && pwd
 }
 
+# Get venv binary directory and python executable based on OS
+# Sets: VENV_BIN_DIR, PYTHON_EXE
+get_venv_paths() {
+    VENV_BIN_DIR="bin"
+    PYTHON_EXE="python"
+
+    case "$(uname -s)" in
+        CYGWIN*|MINGW*|MSYS*)
+            # Windows: Use Scripts directory and python.exe
+            VENV_BIN_DIR="Scripts"
+            PYTHON_EXE="python.exe"
+            ;;
+    esac
+}
+
 # ----------------------------------------------------------------------------
 # User Config Directory
 # ----------------------------------------------------------------------------
@@ -482,19 +497,9 @@ add_mcp_config_to_claude() {
     local project_dir
     project_dir=$(get_script_dir)
 
-    # Detect OS and set correct paths for virtual environment
-    local venv_bin="bin"
-    local python_exe="python"
-
-    case "$(uname -s)" in
-        CYGWIN*|MINGW*|MSYS*)
-            # Windows: Use Scripts directory and python.exe
-            venv_bin="Scripts"
-            python_exe="python.exe"
-            ;;
-    esac
-
-    local python_path="$project_dir/$VENV_PATH/$venv_bin/$python_exe"
+    # Get OS-specific venv paths
+    get_venv_paths
+    local python_path="$project_dir/$VENV_PATH/$VENV_BIN_DIR/$PYTHON_EXE"
     local server_module="-m"
     local server_path="multi_mcp.server"
 
@@ -539,19 +544,9 @@ generate_mcp_config() {
     local project_dir
     project_dir=$(get_script_dir)
 
-    # Detect OS and set correct paths for virtual environment
-    local venv_bin="bin"
-    local python_exe="python"
-
-    case "$(uname -s)" in
-        CYGWIN*|MINGW*|MSYS*)
-            # Windows: Use Scripts directory and python.exe
-            venv_bin="Scripts"
-            python_exe="python.exe"
-            ;;
-    esac
-
-    local python_path="$project_dir/$VENV_PATH/$venv_bin/$python_exe"
+    # Get OS-specific venv paths
+    get_venv_paths
+    local python_path="$project_dir/$VENV_PATH/$VENV_BIN_DIR/$PYTHON_EXE"
     local server_module="-m"
     local server_path="multi_mcp.server"
 
@@ -606,19 +601,9 @@ test_installation() {
 
     print_info "Verifying server can start..."
 
-    # Detect OS and set correct paths for virtual environment
-    local venv_bin="bin"
-    local python_exe="python"
-
-    case "$(uname -s)" in
-        CYGWIN*|MINGW*|MSYS*)
-            # Windows: Use Scripts directory and python.exe
-            venv_bin="Scripts"
-            python_exe="python.exe"
-            ;;
-    esac
-
-    local python_path="$VENV_PATH/$venv_bin/$python_exe"
+    # Get OS-specific venv paths
+    get_venv_paths
+    local python_path="$VENV_PATH/$VENV_BIN_DIR/$PYTHON_EXE"
 
     # Test that server module can be imported
     if "$python_path" -c "from multi_mcp.server import mcp" 2>/dev/null; then

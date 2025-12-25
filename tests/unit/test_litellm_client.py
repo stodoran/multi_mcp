@@ -117,9 +117,10 @@ class TestLiteLLMClient:
                 canonical_name=canonical_name, model_config=model_config, messages=[{"role": "user", "content": "Hello"}]
             )
 
-            assert result.metadata.model == "gpt-5-mini"
+            # Verify default model was used (dynamically, not hardcoded)
+            assert result.metadata.model == canonical_name
             call_kwargs = mock_completion.call_args[1]
-            assert call_kwargs["model"] == "openai/gpt-5-mini"
+            assert call_kwargs["model"] == model_config.litellm_model
 
     @pytest.mark.asyncio
     async def test_call_async_temperature_uses_default(self, client, mock_llm_response):

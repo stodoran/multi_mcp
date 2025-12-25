@@ -88,3 +88,18 @@ async def store_conversation_turn(
         user_msg: Message = {"role": messages[-1]["role"], "content": messages[-1]["content"]}  # type: ignore[typeddict-item]
         assistant_msg: Message = {"role": "assistant", "content": assistant_response}
         await add_messages(thread_id, [user_msg, assistant_msg])
+
+
+def make_model_thread_id(base_thread_id: str, model: str) -> str:
+    """Create composite thread ID for per-model conversation history.
+
+    Used by compare tool to maintain separate conversation history per model.
+
+    Args:
+        base_thread_id: Original thread ID (e.g., "abc123")
+        model: Model name (e.g., "gpt-5-mini")
+
+    Returns:
+        Composite ID (e.g., "abc123::gpt-5-mini")
+    """
+    return f"{base_thread_id}::{model}"

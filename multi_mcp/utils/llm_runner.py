@@ -105,7 +105,7 @@ async def execute_single(
 
 async def execute_parallel(
     models: list[str],
-    messages: list[dict],
+    messages: list[dict] | dict[str, list[dict]],
     max_concurrency: int = DEFAULT_MAX_CONCURRENCY,
     enable_web_search: bool = False,
 ) -> list[ModelResponse]:
@@ -114,7 +114,8 @@ async def execute_parallel(
 
     Args:
         models: List of model names
-        messages: Pre-built messages array (same for all models)
+        messages: Either a shared message list (same for all models) or a dict
+                  mapping model names to their specific message lists (per-model)
         max_concurrency: Max concurrent calls (default: 5)
         enable_web_search: Enable provider-native web search if supported
 
@@ -128,17 +129,31 @@ async def execute_parallel(
     # Use Semaphore for concurrency control (throttles instead of rejecting)
     sem = asyncio.Semaphore(max_concurrency)
 
-    logger.info(f"[LLM_RUNNER] Executing {len(models)} models in parallel (max_concurrency: {max_concurrency})")
+    # Normalize to per-model format for uniform handling
+    if isinstance(messages, dict):
+        per_model_messages = messages
+        logger.info(
+            f"[LLM_RUNNER] Executing {len(models)} models in parallel (max_concurrency: {max_concurrency}, per_model_messages: True)"
+        )
+    else:
+        # Create uniform dict for shared messages (same list ref is intentional, not modified)
+        per_model_messages = dict.fromkeys(models, messages)
+        logger.info(
+            f"[LLM_RUNNER] Executing {len(models)} models in parallel (max_concurrency: {max_concurrency}, per_model_messages: False)"
+        )
 
     async def _bounded_call(model_name: str) -> ModelResponse:
         async with sem:
+            # Get messages for this model
+            model_messages = per_model_messages[model_name]
+
             # Resolve model and route to appropriate executor
             canonical_name, model_config = _resolver.resolve(model_name)
 
             response = await _route_model_execution(
                 canonical_name=canonical_name,
                 model_config=model_config,
-                messages=messages,
+                messages=model_messages,
                 enable_web_search=enable_web_search,
             )
 

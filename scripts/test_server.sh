@@ -1,7 +1,7 @@
 #!/bin/bash
 # Test that the MCP server can start and respond to basic requests
 
-set -e
+set -euo pipefail
 
 echo "Testing Multi-MCP server..."
 echo ""

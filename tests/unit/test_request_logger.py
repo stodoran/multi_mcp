@@ -18,14 +18,13 @@ class TestLogLLMInteraction:
         request_data = {"model": "gpt-5-mini", "messages": [{"role": "user", "content": "Hello"}]}
         response_data = {"content": "Hi there", "usage": {"total_tokens": 10}}
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
-                log_llm_interaction(request_data, response_data)
+        with tempfile.TemporaryDirectory() as tmpdir, patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
+            log_llm_interaction(request_data, response_data)
 
-                # Check that file was created
-                files = list(Path(tmpdir).glob("*.llm.json"))
-                assert len(files) == 1
-                assert "test-123" in files[0].name
+            # Check that file was created
+            files = list(Path(tmpdir).glob("*.llm.json"))
+            assert len(files) == 1
+            assert "test-123" in files[0].name
 
     def test_log_llm_interaction_contains_request_data(self):
         """Test that log file contains request data."""
@@ -37,18 +36,17 @@ class TestLogLLMInteraction:
         }
         response_data = {"content": "Response"}
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
-                log_llm_interaction(request_data, response_data)
+        with tempfile.TemporaryDirectory() as tmpdir, patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
+            log_llm_interaction(request_data, response_data)
 
-                files = list(Path(tmpdir).glob("*.llm.json"))
-                assert len(files) == 1
+            files = list(Path(tmpdir).glob("*.llm.json"))
+            assert len(files) == 1
 
-                with open(files[0], encoding="utf-8") as f:
-                    logged = json.load(f)
+            with open(files[0], encoding="utf-8") as f:
+                logged = json.load(f)
 
-                assert logged["request"]["model_input"] == "gpt-5-mini"
-                assert logged["request"]["temperature"] == 1.0
+            assert logged["request"]["model_input"] == "gpt-5-mini"
+            assert logged["request"]["temperature"] == 1.0
 
     def test_log_llm_interaction_contains_response_data(self):
         """Test that log file contains response data."""
@@ -59,16 +57,15 @@ class TestLogLLMInteraction:
             "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
         }
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
-                log_llm_interaction(request_data, response_data)
+        with tempfile.TemporaryDirectory() as tmpdir, patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
+            log_llm_interaction(request_data, response_data)
 
-                files = list(Path(tmpdir).glob("*.llm.json"))
-                with open(files[0], encoding="utf-8") as f:
-                    logged = json.load(f)
+            files = list(Path(tmpdir).glob("*.llm.json"))
+            with open(files[0], encoding="utf-8") as f:
+                logged = json.load(f)
 
-                assert logged["response"]["content"] == "Test response"
-                assert logged["response"]["usage"]["total_tokens"] == 15
+            assert logged["response"]["content"] == "Test response"
+            assert logged["response"]["usage"]["total_tokens"] == 15
 
     def test_log_llm_interaction_includes_thread_id(self):
         """Test that thread_id is included in log data."""
@@ -76,15 +73,14 @@ class TestLogLLMInteraction:
         request_data = {"model": "gpt-5-mini"}
         response_data = {"content": "Response"}
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
-                log_llm_interaction(request_data, response_data)
+        with tempfile.TemporaryDirectory() as tmpdir, patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
+            log_llm_interaction(request_data, response_data)
 
-                files = list(Path(tmpdir).glob("*.llm.json"))
-                with open(files[0], encoding="utf-8") as f:
-                    logged = json.load(f)
+            files = list(Path(tmpdir).glob("*.llm.json"))
+            with open(files[0], encoding="utf-8") as f:
+                logged = json.load(f)
 
-                assert logged["thread_id"] == "test-123"
+            assert logged["thread_id"] == "test-123"
 
     def test_log_llm_interaction_without_thread_id(self):
         """Test logging without thread_id."""
@@ -93,22 +89,21 @@ class TestLogLLMInteraction:
         request_data = {"model": "gpt-5-mini"}
         response_data = {"content": "Response"}
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
-                log_llm_interaction(request_data, response_data)
+        with tempfile.TemporaryDirectory() as tmpdir, patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
+            log_llm_interaction(request_data, response_data)
 
-                files = list(Path(tmpdir).glob("*.llm.json"))
-                assert len(files) == 1
+            files = list(Path(tmpdir).glob("*.llm.json"))
+            assert len(files) == 1
 
-                # Verify thread_id is None in log data
-                with open(files[0], encoding="utf-8") as f:
-                    logged = json.load(f)
-                assert logged["thread_id"] is None
+            # Verify thread_id is None in log data
+            with open(files[0], encoding="utf-8") as f:
+                logged = json.load(f)
+            assert logged["thread_id"] is None
 
-                with open(files[0], encoding="utf-8") as f:
-                    logged = json.load(f)
+            with open(files[0], encoding="utf-8") as f:
+                logged = json.load(f)
 
-                assert logged["thread_id"] is None
+            assert logged["thread_id"] is None
 
     def test_log_llm_interaction_with_complex_messages(self):
         """Test logging with complex message structures."""
@@ -122,18 +117,17 @@ class TestLogLLMInteraction:
         }
         response_data = {"content": "4", "usage": {"total_tokens": 20}}
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
-                log_llm_interaction(request_data, response_data)
+        with tempfile.TemporaryDirectory() as tmpdir, patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
+            log_llm_interaction(request_data, response_data)
 
-                files = list(Path(tmpdir).glob("*.llm.json"))
-                with open(files[0], encoding="utf-8") as f:
-                    logged = json.load(f)
+            files = list(Path(tmpdir).glob("*.llm.json"))
+            with open(files[0], encoding="utf-8") as f:
+                logged = json.load(f)
 
-                messages = logged["request"]["messages"]
-                assert len(messages) == 2
-                assert messages[0]["role"] == "system"
-                assert messages[1]["role"] == "user"
+            messages = logged["request"]["messages"]
+            assert len(messages) == 2
+            assert messages[0]["role"] == "system"
+            assert messages[1]["role"] == "user"
 
     def test_log_llm_interaction_handles_write_errors(self):
         """Test that write errors are handled gracefully."""
@@ -152,17 +146,16 @@ class TestLogLLMInteraction:
         request_data = {"model": "gpt-5-mini"}
         response_data = {"content": "Response"}
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
-                log_llm_interaction(request_data, response_data)
+        with tempfile.TemporaryDirectory() as tmpdir, patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
+            log_llm_interaction(request_data, response_data)
 
-                files = list(Path(tmpdir).glob("*.llm.json"))
-                assert len(files) == 1
+            files = list(Path(tmpdir).glob("*.llm.json"))
+            assert len(files) == 1
 
-                filename = files[0].name
-                # Should have format: TIMESTAMP.THREADID.llm.json
-                assert "test-123" in filename
-                assert filename.endswith(".llm.json")
+            filename = files[0].name
+            # Should have format: TIMESTAMP.THREADID.llm.json
+            assert "test-123" in filename
+            assert filename.endswith(".llm.json")
 
     def test_log_llm_interaction_timestamp_added(self):
         """Test that timestamp is added to logged data."""
@@ -170,17 +163,16 @@ class TestLogLLMInteraction:
         request_data = {"model": "gpt-5-mini"}
         response_data = {"content": "Response"}
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
-                log_llm_interaction(request_data, response_data)
+        with tempfile.TemporaryDirectory() as tmpdir, patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
+            log_llm_interaction(request_data, response_data)
 
-                files = list(Path(tmpdir).glob("*.llm.json"))
-                with open(files[0], encoding="utf-8") as f:
-                    logged = json.load(f)
+            files = list(Path(tmpdir).glob("*.llm.json"))
+            with open(files[0], encoding="utf-8") as f:
+                logged = json.load(f)
 
-                assert "timestamp" in logged
-                # ISO format timestamp
-                assert "T" in logged["timestamp"]
+            assert "timestamp" in logged
+            # ISO format timestamp
+            assert "T" in logged["timestamp"]
 
     def test_log_llm_interaction_preserves_all_fields(self):
         """Test that all request/response fields are preserved."""
@@ -199,19 +191,18 @@ class TestLogLLMInteraction:
             "canonical_name": "gpt-5-mini",
         }
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
-                log_llm_interaction(request_data, response_data)
+        with tempfile.TemporaryDirectory() as tmpdir, patch("multi_mcp.utils.log_helpers.LOGS_DIR", Path(tmpdir)):
+            log_llm_interaction(request_data, response_data)
 
-                files = list(Path(tmpdir).glob("*.llm.json"))
-                with open(files[0], encoding="utf-8") as f:
-                    logged = json.load(f)
+            files = list(Path(tmpdir).glob("*.llm.json"))
+            with open(files[0], encoding="utf-8") as f:
+                logged = json.load(f)
 
-                # All request fields should be present
-                assert logged["request"]["model_input"] == "mini"
-                assert logged["request"]["canonical_name"] == "gpt-5-mini"
-                assert logged["request"]["temperature"] == 1.0
+            # All request fields should be present
+            assert logged["request"]["model_input"] == "mini"
+            assert logged["request"]["canonical_name"] == "gpt-5-mini"
+            assert logged["request"]["temperature"] == 1.0
 
-                # All response fields should be present
-                assert logged["response"]["content"] == "Response"
-                assert logged["response"]["usage"]["total_tokens"] == 150
+            # All response fields should be present
+            assert logged["response"]["content"] == "Response"
+            assert logged["response"]["usage"]["total_tokens"] == 150

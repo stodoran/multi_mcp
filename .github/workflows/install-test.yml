@@ -122,18 +122,14 @@ jobs:
         test -f .env
         echo "✓ .env file exists"
 
-    - name: Verify server module loads
-      run: |
-        .venv/bin/python -c "from multi_mcp.server import mcp; print(f'✓ Server module loads: {mcp}')"
-
-    - name: Verify CLI entry points in venv
-      run: |
-        .venv/bin/python -m multi_mcp.cli --help
-        .venv/bin/python -m multi_mcp.server --help
-
     - name: Run make verify
       run: |
         make verify
+
+    - name: Verify CLI entry points
+      run: |
+        uv run python -m multi_mcp.cli --help
+        uv run python -m multi_mcp.server --help
 
   # Test installation from PyPI (pip install multi-mcp)
   test-pypi-install:

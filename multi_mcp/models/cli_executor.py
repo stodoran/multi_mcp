@@ -67,7 +67,7 @@ class CLIExecutor:
         prompt = messages[-1]["content"] if messages else ""
 
         # Build command
-        command = [cli_command] + model_config.cli_args
+        command = [cli_command, *model_config.cli_args]
 
         # Prepare environment
         env = os.environ.copy()
@@ -210,7 +210,7 @@ class CLIExecutor:
             logger.error(f"[CLI_CALL] {canonical_name} failed with exception: {type(e).__name__}: {e}")
             logger.debug("[CLI_CALL] Full error details", exc_info=True)
             return ModelResponse.error_response(
-                error=f"CLI execution failed: {type(e).__name__}: {str(e)}",
+                error=f"CLI execution failed: {type(e).__name__}: {e!s}",
                 model=canonical_name,
                 latency_ms=latency_ms,
             )
@@ -249,7 +249,7 @@ class CLIExecutor:
                 if isinstance(parsed, dict):
                     # Claude CLI format: check for errors first
                     # {"type":"result","is_error":true/false,"result":"content"}
-                    if "is_error" in parsed and parsed["is_error"]:
+                    if parsed.get("is_error"):
                         # Claude CLI returned an error
                         error_msg = parsed.get("result", "Unknown error from Claude CLI")
                         raise ValueError(f"Claude CLI error: {error_msg}")

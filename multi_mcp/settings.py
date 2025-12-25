@@ -90,9 +90,9 @@ class Settings(BaseSettings):
     aws_region_name: str | None = Field(default=None, alias="AWS_REGION_NAME")
 
     # Model defaults
-    default_model: str = Field(default="gpt-5-mini", alias="DEFAULT_MODEL")
+    default_model: str = Field(default="gemini-3", alias="DEFAULT_MODEL")
     default_model_list: list[str] = Field(
-        default=["gpt-5-mini", "gemini-3-flash"],
+        default=["codex", "gemini-3", "sonnet"],
         alias="DEFAULT_MODEL_LIST",
         description="Default models for multi-model compare (minimum 2)",
     )

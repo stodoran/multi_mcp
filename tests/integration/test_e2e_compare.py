@@ -470,3 +470,61 @@ async def test_compare_web_search_for_pricing():
             break
 
     assert pricing_found, "No model provided pricing information"
+
+
+# ============================================================================
+# Multi-Turn Compare Tests (Per-Model Conversation History)
+# ============================================================================
+
+
+@pytest.mark.vcr
+@pytest.mark.asyncio
+async def test_compare_multi_turn_context_retention(compare_models):
+    """Integration test: Multi-turn compare with per-model conversation history.
+
+    Verifies that when the same thread_id is used across multiple turns,
+    each model remembers its own previous responses.
+    """
+    thread_id = str(uuid.uuid4())
+
+    # Turn 1: Ask each model to pick a preference
+    result1 = await compare_impl(
+        name="Turn 1",
+        content="What is the capital of France? Answer in exactly one word.",
+        step_number=1,
+        next_action="continue",
+        models=compare_models,
+        base_path="/tmp",
+        thread_id=thread_id,
+    )
+
+    assert result1["status"] in ["success", "partial"]
+    successes1 = [r for r in result1["results"] if r["status"] == "success"]
+    assert len(successes1) >= 1, "At least one model should succeed in Turn 1"
+
+    # Turn 2: Ask a follow-up that requires context from Turn 1
+    result2 = await compare_impl(
+        name="Turn 2",
+        content="What country is that city in? Answer in exactly one word.",
+        step_number=2,
+        next_action="stop",
+        models=compare_models,
+        base_path="/tmp",
+        thread_id=thread_id,
+    )
+
+    assert result2["status"] in ["success", "partial"]
+    successes2 = [r for r in result2["results"] if r["status"] == "success"]
+    assert len(successes2) >= 1, "At least one model should succeed in Turn 2"
+
+    # Verify at least one model used context from Turn 1
+    # It should reference "France" in Turn 2 because it remembers saying "Paris" in Turn 1
+    context_retained = False
+    for model_result in successes2:
+        content_lower = model_result["content"].lower()
+        # The model should answer "France" since it was asked about Paris
+        if "france" in content_lower:
+            context_retained = True
+            break
+
+    assert context_retained, "No model demonstrated context retention. Models should reference France from Turn 1 context."

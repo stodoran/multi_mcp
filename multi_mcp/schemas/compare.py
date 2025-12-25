@@ -19,4 +19,4 @@ class CompareRequest(MultiToolRequest):
 class CompareResponse(MultiToolResponse):
     """Response with side-by-side compare results."""
 
-    pass  # Inherits results: list[ModelResponse] from MultiToolResponse
+    # Inherits results: list[ModelResponse] from MultiToolResponse

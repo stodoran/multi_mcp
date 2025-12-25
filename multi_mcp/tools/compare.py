@@ -1,8 +1,9 @@
-"""Compare tool implementation - side-by-side multi-model execution."""
+"""Compare tool implementation - side-by-side multi-model execution with per-model history."""
 
 import logging
 from typing import Literal
 
+from multi_mcp.memory.store import make_model_thread_id, store_conversation_turn
 from multi_mcp.prompts import COMPARE_PROMPT
 from multi_mcp.schemas.base import ModelResponse
 from multi_mcp.schemas.compare import CompareResponse
@@ -22,22 +23,48 @@ async def compare_impl(
     thread_id: str,
     relevant_files: list[str] | None = None,
 ) -> dict:
-    """Compare implementation - fully stateless."""
+    """Compare implementation with per-model conversation history.
+
+    Each model maintains its own conversation history using composite thread IDs.
+    When called with the same thread_id, each model sees its own prior responses.
+    """
     logger.info(f"[COMPARE] Starting with {len(models)} models, {len(relevant_files or [])} files")
 
-    messages = await (
-        MessageBuilder(system_prompt=COMPARE_PROMPT, base_path=base_path)
-        .add_repository_context()
-        .add_files(relevant_files)
-        .add_user_message(content)
-        .build()
-    )
+    # Build per-model messages with individual history
+    per_model_messages: dict[str, list[dict]] = {}
+    for model in models:
+        model_thread_id = make_model_thread_id(thread_id, model)
+        messages = await (
+            MessageBuilder(
+                system_prompt=COMPARE_PROMPT,
+                base_path=base_path,
+                thread_id=model_thread_id,
+                include_history=True,
+            )
+            .add_conversation_history()
+            .add_repository_context()
+            .add_files(relevant_files)
+            .add_user_message(content)
+            .build()
+        )
+        per_model_messages[model] = messages
 
+    # Execute with per-model messages
     results: list[ModelResponse] = await execute_parallel(
         models=models,
-        messages=messages,
+        messages=per_model_messages,
         enable_web_search=True,
     )
+
+    # Store conversation for successful models
+    for model, response in zip(models, results, strict=True):
+        if response.status == "success":
+            model_thread_id = make_model_thread_id(thread_id, model)
+            await store_conversation_turn(
+                model_thread_id,
+                per_model_messages[model],
+                response.content,
+            )
 
     # Build response
     successes = sum(1 for r in results if r.status == "success")

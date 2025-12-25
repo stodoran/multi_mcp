@@ -225,7 +225,7 @@ def available_clis():
             assert len(available_clis) >= 2, "Need 2+ CLIs"
             # ... test with available_clis[0] and available_clis[1]
     """
-    return [name for name in CLI_TOOLS.keys() if shutil.which(CLI_TOOLS[name]["check"])]
+    return [name for name in CLI_TOOLS if shutil.which(CLI_TOOLS[name]["check"])]
 
 
 # ============================================================================

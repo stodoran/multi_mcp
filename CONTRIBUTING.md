@@ -109,7 +109,7 @@ multi_mcp/
 │   ├── resolver.py    # Model alias resolution
 │   └── litellm_client.py  # Async LLM API calls
 ├── memory/            # Conversation state management
-│   └── store.py       # ThreadStore with 6-hour TTL
+│   └── store.py       # ThreadStore for in-memory conversations
 ├── prompts/           # System prompts (markdown files)
 │   ├── codereview.md
 │   ├── chat.md

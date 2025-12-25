@@ -135,7 +135,7 @@ See README.md for CLI usage examples. Note: CLI is experimental.
 - **DRY principle**: Factory auto-generates tools from schemas
 
 **`multi_mcp/memory/`**: Conversation state management
-- `store.py` - `ThreadStore` class for request/response storage with 6-hour TTL
+- `store.py` - `ThreadStore` class for in-memory conversation storage
 
 **`multi_mcp/prompts/`**: System prompts loaded from markdown files
 - `codereview.md` - Code review instructions with OWASP Top 10, performance patterns

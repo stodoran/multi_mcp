@@ -407,3 +407,75 @@ async def test_execute_parallel_routes_mixed_models():
         assert all(r.status == "success" for r in results)
         assert any(r.content == "API response" for r in results)
         assert any(r.content == "CLI response" for r in results)
+
+
+# ============================================================================
+# Tests for Per-Model Messages
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_execute_parallel_per_model_messages():
+    """Test execute_parallel with per-model messages (dict format)."""
+    set_request_context(thread_id="test-thread")
+
+    received_messages: dict[str, list] = {}
+
+    async def mock_call_async(canonical_name: str, model_config, messages: list[dict], enable_web_search: bool = False):
+        received_messages[canonical_name] = messages
+        return ModelResponse(
+            content=f"Response from {canonical_name}",
+            status="success",
+            metadata=ModelResponseMetadata(model=canonical_name, total_tokens=100),
+        )
+
+    # Different messages for each model
+    per_model_messages = {
+        "model-a": [{"role": "user", "content": "Message for model A"}],
+        "model-b": [{"role": "user", "content": "Message for model B"}],
+    }
+
+    with patch("multi_mcp.utils.llm_runner._litellm_client.execute", side_effect=mock_call_async):
+        results = await execute_parallel(
+            models=["model-a", "model-b"],
+            messages=per_model_messages,
+        )
+
+    assert len(results) == 2
+    assert all(r.status == "success" for r in results)
+
+    # Verify each model received its specific messages
+    assert received_messages["model-a"][0]["content"] == "Message for model A"
+    assert received_messages["model-b"][0]["content"] == "Message for model B"
+
+
+@pytest.mark.asyncio
+async def test_execute_parallel_shared_messages_still_works():
+    """Test execute_parallel still works with shared messages (list format)."""
+    set_request_context(thread_id="test-thread")
+
+    received_messages: list[list] = []
+
+    async def mock_call_async(canonical_name: str, model_config, messages: list[dict], enable_web_search: bool = False):
+        received_messages.append(messages)
+        return ModelResponse(
+            content="Response",
+            status="success",
+            metadata=ModelResponseMetadata(model=canonical_name, total_tokens=100),
+        )
+
+    shared_messages = [{"role": "user", "content": "Same message for all models"}]
+
+    with patch("multi_mcp.utils.llm_runner._litellm_client.execute", side_effect=mock_call_async):
+        results = await execute_parallel(
+            models=["model-a", "model-b"],
+            messages=shared_messages,
+        )
+
+    assert len(results) == 2
+    assert all(r.status == "success" for r in results)
+
+    # Verify both models received the same messages
+    assert len(received_messages) == 2
+    assert received_messages[0] == shared_messages
+    assert received_messages[1] == shared_messages

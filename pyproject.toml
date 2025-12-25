@@ -64,9 +64,6 @@ multi-mcp = "multi_mcp.server:main"
 dev = [
     # Testing
     "pytest>=9.0.0",
-
-    # Publishing
-    "twine>=6.0.0",
     "pytest-asyncio>=0.23.0",
     "pytest-mock>=3.15.0",
     "pytest-cov>=4.1.0",
@@ -80,8 +77,11 @@ dev = [
     "ruff>=0.14.0",
     "pyright>=1.1.407",
 
-    # Optional tracing
-    # "langsmith>=0.1.0",
+    # Dead code detection (YAGNI)
+    "vulture>=2.11",
+
+    # Publishing
+    "twine>=6.0.0",
 ]
 
 [project.urls]
@@ -135,17 +135,33 @@ exclude = ["tests/data/**", ".venv/**", "build/**", "dist/**", "ref/**", "tmp/**
 select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
-    "F",  # pyflakes
+    "F",  # pyflakes (F401=unused imports, F841=unused variables)
     "I",  # isort
     "B",  # flake8-bugbear
     "C4",  # flake8-comprehensions
+    "C90",  # mccabe complexity (KISS)
     "UP",  # pyupgrade
+    "SIM",  # flake8-simplify (DRY/KISS suggestions)
+    "PIE",  # flake8-pie (misc simplifications)
+    "RUF",  # Ruff-specific rules (unused noqa, etc.)
 ]
 ignore = [
     "E501",  # line too long (handled by formatter)
     "B008",  # do not perform function calls in argument defaults
-    "C901",  # too complex
+    "SIM108",  # use ternary operator (not always cleaner)
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15  # KISS: Flag functions over this cyclomatic complexity
+
+[tool.ruff.lint.per-file-ignores]
+# Pre-existing complex functions - candidates for future refactoring
+"multi_mcp/models/cli_executor.py" = ["C901"]  # execute, _parse_output
+"multi_mcp/tools/codereview.py" = ["C901"]  # codereview_impl (31)
+# Tests often use nested with statements (pytest.raises + mocks)
+"tests/**/*.py" = ["SIM117"]
+# Scripts are utility code, not production
+"scripts/**/*.py" = ["SIM110", "SIM117"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["multi_mcp"]
@@ -158,3 +174,17 @@ reportMissingImports = true
 reportMissingTypeStubs = false
 pythonVersion = "3.11"
 pythonPlatform = "All"
+
+[tool.coverage.run]
+source = ["multi_mcp"]
+branch = true
+omit = ["multi_mcp/__init__.py"]
+
+[tool.coverage.report]
+fail_under = 80  # Minimum coverage threshold
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

@@ -1,10 +1,12 @@
 """Unit tests for compare tool."""
 
+import uuid
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from pydantic import ValidationError
 
+from multi_mcp.memory.store import get_messages, make_model_thread_id
 from multi_mcp.schemas.base import ModelResponse, ModelResponseMetadata, MultiToolRequest, MultiToolResponse
 from multi_mcp.schemas.compare import CompareRequest
 from multi_mcp.tools.compare import compare_impl
@@ -352,3 +354,187 @@ class TestCompareImpl:
         # Verify the error message
         assert "Too many files" in str(exc_info.value)
         assert str(settings.max_files_per_review) in str(exc_info.value)
+
+
+class TestCompareMultiTurn:
+    """Test multi-turn compare with per-model conversation history."""
+
+    @pytest.mark.asyncio
+    async def test_compare_stores_per_model_history(self):
+        """Test that compare stores conversation history per model."""
+        thread_id = f"test-multi-turn-{uuid.uuid4()}"
+
+        async def mock_execute(canonical_name, model_config, messages, enable_web_search=False):
+            return mock_model_response(content=f"Response from {canonical_name}", model=canonical_name)
+
+        with patch("multi_mcp.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
+            mock_call.side_effect = mock_execute
+
+            result = await compare_impl(
+                name="Turn 1",
+                content="First question",
+                step_number=1,
+                next_action="continue",
+                models=["model-a", "model-b"],
+                base_path="/tmp",
+                thread_id=thread_id,
+            )
+
+            assert result["status"] == "success"
+
+        # Verify per-model history was stored
+        history_a = await get_messages(make_model_thread_id(thread_id, "model-a"))
+        history_b = await get_messages(make_model_thread_id(thread_id, "model-b"))
+
+        # Each model should have system + user + assistant (3 messages)
+        assert len(history_a) == 3
+        assert history_a[-1]["role"] == "assistant"
+        assert "Response from model-a" in history_a[-1]["content"]
+
+        assert len(history_b) == 3
+        assert history_b[-1]["role"] == "assistant"
+        assert "Response from model-b" in history_b[-1]["content"]
+
+    @pytest.mark.asyncio
+    async def test_compare_second_turn_uses_history(self):
+        """Test that second turn includes first turn history per model."""
+        thread_id = f"test-second-turn-{uuid.uuid4()}"
+        captured_messages: dict[str, list] = {}
+
+        async def mock_execute_turn1(canonical_name, model_config, messages, enable_web_search=False):
+            return mock_model_response(content=f"Turn 1 response from {canonical_name}", model=canonical_name)
+
+        async def mock_execute_turn2(canonical_name, model_config, messages, enable_web_search=False):
+            captured_messages[canonical_name] = messages
+            return mock_model_response(content=f"Turn 2 response from {canonical_name}", model=canonical_name)
+
+        # Turn 1: Execute and store history
+        with patch("multi_mcp.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
+            mock_call.side_effect = mock_execute_turn1
+
+            await compare_impl(
+                name="Turn 1",
+                content="First question",
+                step_number=1,
+                next_action="continue",
+                models=["model-a", "model-b"],
+                base_path="/tmp",
+                thread_id=thread_id,
+            )
+
+        # Turn 2: Should include history from turn 1
+        with patch("multi_mcp.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
+            mock_call.side_effect = mock_execute_turn2
+
+            await compare_impl(
+                name="Turn 2",
+                content="Second question",
+                step_number=2,
+                next_action="stop",
+                models=["model-a", "model-b"],
+                base_path="/tmp",
+                thread_id=thread_id,
+            )
+
+        # Verify each model received its own history plus new question
+        for model in ["model-a", "model-b"]:
+            messages = captured_messages[model]
+            # Should have: system + user1 + assistant1 + user2
+            assert len(messages) == 4
+            assert messages[0]["role"] == "system"
+            assert messages[1]["role"] == "user"
+            assert messages[2]["role"] == "assistant"
+            assert f"Turn 1 response from {model}" in messages[2]["content"]
+            assert messages[3]["role"] == "user"
+            assert "Second question" in messages[3]["content"]
+
+    @pytest.mark.asyncio
+    async def test_compare_model_history_isolation(self):
+        """Test that model A doesn't see model B's history."""
+        thread_id = f"test-isolation-{uuid.uuid4()}"
+        captured_messages: dict[str, list] = {}
+
+        async def mock_execute_turn1(canonical_name, model_config, messages, enable_web_search=False):
+            # Different responses per model
+            if canonical_name == "model-a":
+                return mock_model_response(content="A says: I prefer PostgreSQL", model=canonical_name)
+            else:
+                return mock_model_response(content="B says: I prefer MongoDB", model=canonical_name)
+
+        async def mock_execute_turn2(canonical_name, model_config, messages, enable_web_search=False):
+            captured_messages[canonical_name] = messages
+            return mock_model_response(content="Turn 2", model=canonical_name)
+
+        # Turn 1
+        with patch("multi_mcp.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
+            mock_call.side_effect = mock_execute_turn1
+
+            await compare_impl(
+                name="Turn 1",
+                content="What database do you recommend?",
+                step_number=1,
+                next_action="continue",
+                models=["model-a", "model-b"],
+                base_path="/tmp",
+                thread_id=thread_id,
+            )
+
+        # Turn 2
+        with patch("multi_mcp.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
+            mock_call.side_effect = mock_execute_turn2
+
+            await compare_impl(
+                name="Turn 2",
+                content="Why not the other option?",
+                step_number=2,
+                next_action="stop",
+                models=["model-a", "model-b"],
+                base_path="/tmp",
+                thread_id=thread_id,
+            )
+
+        # Model A should only see "PostgreSQL" in its history, not "MongoDB"
+        msgs_a = captured_messages["model-a"]
+        history_content_a = " ".join(m["content"] for m in msgs_a)
+        assert "PostgreSQL" in history_content_a
+        assert "MongoDB" not in history_content_a
+
+        # Model B should only see "MongoDB" in its history, not "PostgreSQL"
+        msgs_b = captured_messages["model-b"]
+        history_content_b = " ".join(m["content"] for m in msgs_b)
+        assert "MongoDB" in history_content_b
+        assert "PostgreSQL" not in history_content_b
+
+    @pytest.mark.asyncio
+    async def test_compare_failed_model_no_history(self):
+        """Test that failed models don't store history."""
+        thread_id = f"test-failure-{uuid.uuid4()}"
+
+        async def mock_execute(canonical_name, model_config, messages, enable_web_search=False):
+            if canonical_name == "model-a":
+                return mock_model_response(content="Success", model=canonical_name)
+            else:
+                return mock_model_response(model=canonical_name, error="Model B failed")
+
+        with patch("multi_mcp.utils.llm_runner._litellm_client.execute", new_callable=AsyncMock) as mock_call:
+            mock_call.side_effect = mock_execute
+
+            result = await compare_impl(
+                name="Turn 1",
+                content="Test question",
+                step_number=1,
+                next_action="continue",
+                models=["model-a", "model-b"],
+                base_path="/tmp",
+                thread_id=thread_id,
+            )
+
+            assert result["status"] == "partial"
+
+        # Model A should have history stored
+        history_a = await get_messages(make_model_thread_id(thread_id, "model-a"))
+        assert len(history_a) == 3
+
+        # Model B should NOT have history (it failed)
+        history_b = await get_messages(make_model_thread_id(thread_id, "model-b"))
+        assert len(history_b) == 0

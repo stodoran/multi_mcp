@@ -2,7 +2,14 @@
 
 import pytest
 
-from multi_mcp.memory.store import Message, add_messages, get_messages, get_thread_store, store_conversation_turn
+from multi_mcp.memory.store import (
+    Message,
+    add_messages,
+    get_messages,
+    get_thread_store,
+    make_model_thread_id,
+    store_conversation_turn,
+)
 
 
 @pytest.mark.asyncio
@@ -160,3 +167,55 @@ async def test_store_conversation_turn_continuation():
     assert retrieved[3]["content"] == "Second message"
     assert retrieved[4]["role"] == "assistant"
     assert retrieved[4]["content"] == "Second response"
+
+
+# Composite thread ID helper tests
+
+
+def test_make_model_thread_id():
+    """Test creating composite thread ID."""
+    result = make_model_thread_id("abc123", "gpt-5-mini")
+    assert result == "abc123::gpt-5-mini"
+
+
+def test_make_model_thread_id_with_special_chars():
+    """Test composite ID with model names containing special characters."""
+    result = make_model_thread_id("thread-id", "claude-haiku-4-5-20251001")
+    assert result == "thread-id::claude-haiku-4-5-20251001"
+
+
+@pytest.mark.asyncio
+async def test_model_thread_isolation():
+    """Test that per-model threads are isolated from each other."""
+    base_thread = "test-compare-isolation"
+
+    # Store different messages for different models
+    model_a_thread = make_model_thread_id(base_thread, "model-a")
+    model_b_thread = make_model_thread_id(base_thread, "model-b")
+
+    await add_messages(model_a_thread, [{"role": "assistant", "content": "Response from A"}])
+    await add_messages(model_b_thread, [{"role": "assistant", "content": "Response from B"}])
+
+    # Each model sees only its own history
+    msgs_a = await get_messages(model_a_thread)
+    msgs_b = await get_messages(model_b_thread)
+
+    assert len(msgs_a) == 1
+    assert msgs_a[0]["content"] == "Response from A"
+    assert len(msgs_b) == 1
+    assert msgs_b[0]["content"] == "Response from B"
+
+
+@pytest.mark.asyncio
+async def test_roundtrip_composite_thread_id():
+    """Test that composite IDs work correctly with store operations."""
+    base = "roundtrip-test"
+    model = "test-model"
+
+    composite_id = make_model_thread_id(base, model)
+    await add_messages(composite_id, [{"role": "user", "content": "Test"}])
+
+    # Should be able to retrieve using the composite ID
+    retrieved = await get_messages(composite_id)
+    assert len(retrieved) == 1
+    assert retrieved[0]["content"] == "Test"

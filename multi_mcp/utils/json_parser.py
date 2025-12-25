@@ -301,7 +301,7 @@ def parse_llm_json(text: str) -> Any | None:
     raw = _strip_code_fences(raw)
     candidate = raw.strip()
 
-    if not (candidate.startswith("{") or candidate.startswith("[")):
+    if not candidate.startswith(("{", "[")):
         block = _extract_first_json_block(candidate)
         if block is None:
             return None
