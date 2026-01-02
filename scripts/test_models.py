@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from multi_mcp.models.config import PROVIDERS
 from multi_mcp.models.litellm_client import LiteLLMClient
+from multi_mcp.models.resolver import ModelResolver
 from multi_mcp.settings import settings
 
 # Models to test per provider (cheapest/fastest)
@@ -31,7 +32,7 @@ TEST_MODELS: dict[str, str] = {
 TEST_TIMEOUT = 15
 
 
-async def test_model(client: LiteLLMClient, model: str) -> tuple[str, bool, str]:
+async def test_model(client: LiteLLMClient, resolver: ModelResolver, model: str) -> tuple[str, bool, str]:
     """Test a single model with a minimal prompt.
 
     Returns:
@@ -40,9 +41,12 @@ async def test_model(client: LiteLLMClient, model: str) -> tuple[str, bool, str]
     messages = [{"role": "user", "content": "Say hi"}]
 
     try:
+        # Resolve model name to canonical name and config
+        canonical_name, model_config = resolver.resolve(model)
+
         # Use asyncio.wait_for() instead of mutating global settings (race condition safe)
         response = await asyncio.wait_for(
-            client.call_async(messages, model=model),
+            client.execute(canonical_name, model_config, messages),
             timeout=TEST_TIMEOUT,
         )
 
@@ -81,12 +85,13 @@ async def test_all_models() -> list[tuple[str, str, bool, str]]:
         List of (provider, model, success, message)
     """
     client = LiteLLMClient()
+    resolver = ModelResolver()
     tasks = []
     provider_model_map = []
 
     for provider, model in TEST_MODELS.items():
         if check_provider_credentials(provider):
-            tasks.append(test_model(client, model))
+            tasks.append(test_model(client, resolver, model))
             provider_model_map.append((provider, model))
 
     if not tasks:

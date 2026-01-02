@@ -42,6 +42,15 @@ class TestSemanticMerge:
 
         assert result == base
 
+    def test_merge_none_models_in_override(self):
+        """Override with models: None (from YAML with only comments) is handled."""
+        base = {"version": "1.0", "models": {"gpt-4": {"notes": "base"}}}
+        override = {"version": "1.0", "models": None}  # YAML parses `models:` with only comments as None
+        result = semantic_merge(base, override)
+
+        # Base models should be preserved when override models is None
+        assert result["models"]["gpt-4"]["notes"] == "base"
+
     def test_merge_empty_base(self):
         """Override adds to empty base."""
         base = {}

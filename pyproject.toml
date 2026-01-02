@@ -3,7 +3,7 @@ name = "multi-mcp"
 version = "0.1.1"
 description = "Multi-Model Code Review and Analysis MCP Server for Claude Code"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 license = "MIT"
 authors = [
     {name = "Multi-MCP Team", email = "multi.mcp.team@gmail.com"}

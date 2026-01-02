@@ -204,7 +204,7 @@ def semantic_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, 
     result = base.copy()
 
     # Merge models by name (key-level merge)
-    if "models" in override:
+    if "models" in override and override["models"] is not None:
         result.setdefault("models", {})
 
         # Collect all aliases from user config (these take precedence)

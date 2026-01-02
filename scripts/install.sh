@@ -143,12 +143,12 @@ create_venv() {
 
     if [[ -d "$VENV_PATH" ]]; then
         print_warning "Virtual environment already exists at $VENV_PATH"
-        # In CI/non-interactive mode, reuse existing venv (safer than deleting)
-        if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
-            print_info "Using existing venv (non-interactive mode)"
+        # In CI/non-interactive mode, or when stdin isn't a terminal, reuse existing venv
+        if [[ "${NON_INTERACTIVE:-}" == "1" ]] || [[ ! -t 0 ]]; then
+            print_info "Using existing venv"
             return 0
         fi
-        read -p "Remove and recreate? (y/N): " -n 1 -r
+        read -p "Remove and recreate? (y/N): " -n 1 -r </dev/tty
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             rm -rf "$VENV_PATH"
@@ -174,12 +174,12 @@ setup_env_file() {
 
     if [[ -f "$ENV_FILE" ]]; then
         print_warning "Found existing $ENV_FILE"
-        # In CI/non-interactive mode, keep existing .env (don't overwrite)
-        if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
-            print_success "Keeping existing $ENV_FILE (non-interactive mode)"
+        # In CI/non-interactive mode, or when stdin isn't a terminal, keep existing .env
+        if [[ "${NON_INTERACTIVE:-}" == "1" ]] || [[ ! -t 0 ]]; then
+            print_success "Keeping existing $ENV_FILE"
             return 0
         fi
-        read -p "Keep existing configuration? (Y/n): " -n 1 -r
+        read -p "Keep existing configuration? (Y/n): " -n 1 -r </dev/tty
         echo
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
             print_success "Keeping existing $ENV_FILE"
@@ -249,13 +249,13 @@ sync_env_keys() {
     echo "" >&2
     print_info "Found $count API key(s) in environment: ${available_keys[*]}"
 
-    # In CI/non-interactive mode, skip syncing (safer - don't modify files without explicit consent)
-    if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
+    # In CI/non-interactive mode, or when stdin isn't a terminal, skip syncing
+    if [[ "${NON_INTERACTIVE:-}" == "1" ]] || [[ ! -t 0 ]]; then
         print_info "Skipping key sync (non-interactive mode)"
         return 0
     fi
 
-    read -p "Sync these to $env_file? (Y/n): " -n 1 -r
+    read -p "Sync these to $env_file? (Y/n): " -n 1 -r </dev/tty
     echo
 
     # User declined
@@ -463,12 +463,12 @@ update_mcp_config_file() {
         # Check if multi server already exists
         if jq -e '.mcpServers.multi' "$config_path" &> /dev/null; then
             print_warning "Found existing 'multi' server in $config_name config"
-            # In CI/non-interactive mode, keep existing config (don't overwrite)
-            if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
-                print_info "Keeping existing configuration (non-interactive mode)"
+            # In CI/non-interactive mode, or when stdin isn't a terminal, keep existing config
+            if [[ "${NON_INTERACTIVE:-}" == "1" ]] || [[ ! -t 0 ]]; then
+                print_info "Keeping existing configuration"
                 return 0
             fi
-            read -p "Overwrite existing configuration? (y/N): " -n 1 -r
+            read -p "Overwrite existing configuration? (y/N): " -n 1 -r </dev/tty
             echo
             if [[ ! $REPLY =~ ^[Yy]$ ]]; then
                 print_info "Keeping existing configuration"
@@ -552,15 +552,15 @@ generate_mcp_config() {
 
     print_header "MCP Client Configuration"
 
-    # Skip interactive configuration in CI/non-interactive mode
-    if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
+    # Skip interactive configuration in CI/non-interactive mode or when stdin isn't a terminal
+    if [[ "${NON_INTERACTIVE:-}" == "1" ]] || [[ ! -t 0 ]]; then
         print_info "Skipping MCP client configuration (non-interactive mode)"
         return 0
     fi
 
     # Try to automatically configure Claude Desktop
     echo "" >&2
-    read -p "Automatically add to Claude Desktop config? (Y/n): " -n 1 -r
+    read -p "Automatically add to Claude Desktop config? (Y/n): " -n 1 -r </dev/tty
     echo
     echo "" >&2
 
@@ -685,8 +685,8 @@ setup_user_env() {
         return 0
     fi
 
-    # In CI/non-interactive mode, skip creating user .env (avoid polluting home directory)
-    if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
+    # In CI/non-interactive mode, or when stdin isn't a terminal, skip creating user .env
+    if [[ "${NON_INTERACTIVE:-}" == "1" ]] || [[ ! -t 0 ]]; then
         print_info "Skipping user .env creation (non-interactive mode)"
         return 0
     fi
@@ -694,7 +694,7 @@ setup_user_env() {
     # Ask user
     echo "" >&2
     print_info "User .env stores API keys for pip install users"
-    read -p "Create user .env at $user_env_file? (y/N): " -n 1 -r
+    read -p "Create user .env at $user_env_file? (y/N): " -n 1 -r </dev/tty
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         print_info "Skipping user .env (you can create it later)"
@@ -731,8 +731,8 @@ setup_user_config() {
         return 0
     fi
 
-    # In CI/non-interactive mode, skip creating user config (avoid polluting home directory)
-    if [[ "${NON_INTERACTIVE:-}" == "1" ]]; then
+    # In CI/non-interactive mode, or when stdin isn't a terminal, skip creating user config
+    if [[ "${NON_INTERACTIVE:-}" == "1" ]] || [[ ! -t 0 ]]; then
         print_info "Skipping user config creation (non-interactive mode)"
         return 0
     fi
@@ -740,7 +740,7 @@ setup_user_config() {
     # Ask user
     echo "" >&2
     print_info "User config allows customizing models and settings"
-    read -p "Create user config template at $user_config_file? (y/N): " -n 1 -r
+    read -p "Create user config template at $user_config_file? (y/N): " -n 1 -r </dev/tty
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         print_info "Skipping user config (you can create it later)"
@@ -812,7 +812,7 @@ show_next_steps() {
     echo "   Try: /multi:models" >&2
     echo "" >&2
 
-    print_info "For more information, see docs/install-v1.md"
+    print_info "For more information, see README.md"
     echo "" >&2
 }
 
@@ -856,9 +856,9 @@ main() {
     test_installation
 
     # Test model providers (optional - asks user)
-    if [[ "${NON_INTERACTIVE:-}" != "1" ]]; then
+    if [[ "${NON_INTERACTIVE:-}" != "1" ]] && [[ -t 0 ]]; then
         echo "" >&2
-        read -p "Test model providers now? (Y/n): " -n 1 -r
+        read -p "Test model providers now? (Y/n): " -n 1 -r </dev/tty
         echo
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
             test_model_providers
